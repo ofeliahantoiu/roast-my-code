@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.IO;
 using RoastMyCode.Services;
 using RoastMyCode.Controls;
 
@@ -17,6 +18,7 @@ namespace RoastMyCode
         private TextBox txtOutput = null!;
         private Button btnRoast = null!;
         private Button btnCopy = null!;
+        private Button btnSave = null!;
         private ComboBox cmbRoastLevel = null!;
         private Label lblStatus = null!;
 
@@ -114,12 +116,27 @@ namespace RoastMyCode
             btnCopy.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
             btnCopy.Click += btnCopy_Click;
 
+            // Save button
+            btnSave = new Button
+            {
+                Text = "Save Code",
+                Location = new Point(380, 490),
+                Size = new Size(120, 40),
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnSave.FlatAppearance.BorderSize = 1;
+            btnSave.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnSave.Click += btnSave_Click;
+
             // Status label
             lblStatus = new Label
             {
                 Text = "Ready",
                 Font = new Font("Segoe UI", 9),
-                Location = new Point(380, 500),
+                Location = new Point(520, 500),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(0, 122, 204)
             };
@@ -152,7 +169,7 @@ namespace RoastMyCode
             // Add controls to form
             this.Controls.AddRange(new Control[] {
                 lblTitle, lblRoastLevel, cmbRoastLevel,
-                lblCodeInput, _codeEditor, btnRoast, btnCopy,
+                lblCodeInput, _codeEditor, btnRoast, btnCopy, btnSave,
                 lblStatus, lblOutput, txtOutput
             });
         }
@@ -217,6 +234,49 @@ namespace RoastMyCode
             {
                 MessageBox.Show($"Error copying to clipboard: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 lblStatus.Text = "Error copying code";
+            }
+        }
+
+        private void btnSave_Click(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_codeEditor.Code))
+            {
+                MessageBox.Show("No code to save!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SaveFileDialog saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
+                saveDialog.FilterIndex = 1;
+                saveDialog.DefaultExt = "cs";
+                saveDialog.Title = "Save Code";
+                saveDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        File.WriteAllText(saveDialog.FileName, _codeEditor.Code);
+                        lblStatus.Text = "Code saved successfully!";
+                        
+                        // Reset status after 2 seconds
+                        var timer = new System.Windows.Forms.Timer();
+                        timer.Interval = 2000;
+                        timer.Tick += (s, args) =>
+                        {
+                            lblStatus.Text = "Ready";
+                            timer.Stop();
+                            timer.Dispose();
+                        };
+                        timer.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        lblStatus.Text = "Error saving code";
+                    }
+                }
             }
         }
     }
