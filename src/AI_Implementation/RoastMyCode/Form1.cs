@@ -13,11 +13,11 @@ namespace RoastMyCode
     {
         private readonly AIService _aiService;
         private List<ChatMessage> _conversationHistory;
-        private MonacoEditorControl _codeEditor;
-        private TextBox txtOutput;
-        private Button btnRoast;
-        private ComboBox cmbRoastLevel;
-        private Label lblStatus;
+        private CodeEditorControl _codeEditor = null!;
+        private TextBox txtOutput = null!;
+        private Button btnRoast = null!;
+        private ComboBox cmbRoastLevel = null!;
+        private Label lblStatus = null!;
 
         public Form1()
         {
@@ -75,11 +75,11 @@ namespace RoastMyCode
                 AutoSize = true
             };
 
-            _codeEditor = new MonacoEditorControl
+            _codeEditor = new CodeEditorControl
             {
                 Location = new Point(20, 180),
                 Size = new Size(940, 300),
-                Language = "csharp",
+                Language = "C#",
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 MinimumSize = new Size(200, 100)
             };
@@ -141,7 +141,7 @@ namespace RoastMyCode
             });
         }
 
-        private async void btnRoast_Click(object sender, EventArgs e)
+        private async void btnRoast_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(_codeEditor.Code))
             {
@@ -176,7 +176,7 @@ namespace RoastMyCode
 
     public class ChatMessage
     {
-        public required string Role { get; set; }
-        public required string Content { get; set; }
+        public string Role { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
     }
 }
