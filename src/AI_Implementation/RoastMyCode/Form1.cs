@@ -80,7 +80,8 @@ namespace RoastMyCode
                 Location = new Point(20, 180),
                 Size = new Size(940, 300),
                 Language = "csharp",
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                MinimumSize = new Size(200, 100)
             };
 
             // Roast button
@@ -113,7 +114,8 @@ namespace RoastMyCode
                 Text = "Roast Result:",
                 Font = new Font("Segoe UI", 10),
                 Location = new Point(20, 540),
-                AutoSize = true
+                AutoSize = true,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
 
             txtOutput = new TextBox
@@ -126,7 +128,9 @@ namespace RoastMyCode
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.Vertical,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                MinimumSize = new Size(200, 100)
             };
 
             // Add controls to form
