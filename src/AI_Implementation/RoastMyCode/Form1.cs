@@ -16,6 +16,7 @@ namespace RoastMyCode
         private CodeEditorControl _codeEditor = null!;
         private TextBox txtOutput = null!;
         private Button btnRoast = null!;
+        private Button btnCopy = null!;
         private ComboBox cmbRoastLevel = null!;
         private Label lblStatus = null!;
 
@@ -98,12 +99,27 @@ namespace RoastMyCode
             btnRoast.FlatAppearance.BorderSize = 0;
             btnRoast.Click += btnRoast_Click;
 
+            // Copy button
+            btnCopy = new Button
+            {
+                Text = "Copy Code",
+                Location = new Point(240, 490),
+                Size = new Size(120, 40),
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnCopy.FlatAppearance.BorderSize = 1;
+            btnCopy.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnCopy.Click += btnCopy_Click;
+
             // Status label
             lblStatus = new Label
             {
                 Text = "Ready",
                 Font = new Font("Segoe UI", 9),
-                Location = new Point(240, 500),
+                Location = new Point(380, 500),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(0, 122, 204)
             };
@@ -136,7 +152,7 @@ namespace RoastMyCode
             // Add controls to form
             this.Controls.AddRange(new Control[] {
                 lblTitle, lblRoastLevel, cmbRoastLevel,
-                lblCodeInput, _codeEditor, btnRoast,
+                lblCodeInput, _codeEditor, btnRoast, btnCopy,
                 lblStatus, lblOutput, txtOutput
             });
         }
@@ -170,6 +186,37 @@ namespace RoastMyCode
             finally
             {
                 btnRoast.Enabled = true;
+            }
+        }
+
+        private void btnCopy_Click(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_codeEditor.Code))
+            {
+                MessageBox.Show("No code to copy!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                Clipboard.SetText(_codeEditor.Code);
+                lblStatus.Text = "Code copied to clipboard!";
+                
+                // Reset status after 2 seconds
+                var timer = new System.Windows.Forms.Timer();
+                timer.Interval = 2000;
+                timer.Tick += (s, args) =>
+                {
+                    lblStatus.Text = "Ready";
+                    timer.Stop();
+                    timer.Dispose();
+                };
+                timer.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error copying to clipboard: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "Error copying code";
             }
         }
     }
