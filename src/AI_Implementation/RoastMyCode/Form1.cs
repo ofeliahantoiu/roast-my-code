@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using RoastMyCode.Services;
+using RoastMyCode.Controls;
 
 namespace RoastMyCode
 {
@@ -11,90 +13,166 @@ namespace RoastMyCode
     {
         private readonly AIService _aiService;
         private List<ChatMessage> _conversationHistory;
+        private MonacoEditorControl _codeEditor;
+        private TextBox txtOutput;
+        private Button btnRoast;
+        private ComboBox cmbRoastLevel;
+        private Label lblStatus;
 
         public Form1()
         {
             InitializeComponent();
             _aiService = new AIService();
             _conversationHistory = new List<ChatMessage>();
-            InitializeRoastLevels();
-            InitializeChatInterface();
+            InitializeCustomComponents();
         }
 
-        private void InitializeRoastLevels()
+        private void InitializeCustomComponents()
         {
+            // Form settings
+            this.Text = "Roast My Code";
+            this.Size = new Size(1000, 800);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(45, 45, 48);
+            this.ForeColor = Color.White;
+
+            // Title label
+            Label lblTitle = new Label
+            {
+                Text = "Roast My Code",
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Height = 60
+            };
+
+            // Roast level label and combo box
+            Label lblRoastLevel = new Label
+            {
+                Text = "Select Roast Level:",
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(20, 80),
+                AutoSize = true
+            };
+
+            cmbRoastLevel = new ComboBox
+            {
+                Location = new Point(20, 110),
+                Size = new Size(200, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10)
+            };
             cmbRoastLevel.Items.AddRange(new string[] { "Light", "Savage", "Brutal" });
             cmbRoastLevel.SelectedIndex = 0;
-        }
 
-        private void InitializeChatInterface()
-        {
-            // Assuming you have these controls in your form:
-            // txtCodeInput: TextBox for code input
-            // txtOutput: TextBox for AI responses
-            // btnRoast: Button for sending messages
-            // cmbRoastLevel: ComboBox for roast level
+            // Code editor
+            Label lblCodeInput = new Label
+            {
+                Text = "Paste Your Code:",
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(20, 150),
+                AutoSize = true
+            };
 
-            txtCodeInput.Multiline = true;
-            txtCodeInput.Height = 100;
-            txtCodeInput.PlaceholderText = "Paste your code here or type your message...";
+            _codeEditor = new MonacoEditorControl
+            {
+                Location = new Point(20, 180),
+                Size = new Size(940, 300),
+                Language = "csharp",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
 
-            txtOutput.Multiline = true;
-            txtOutput.ReadOnly = true;
-            txtOutput.ScrollBars = ScrollBars.Vertical;
+            // Roast button
+            btnRoast = new Button
+            {
+                Text = "Roast My Code!",
+                Location = new Point(20, 490),
+                Size = new Size(200, 40),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnRoast.FlatAppearance.BorderSize = 0;
+            btnRoast.Click += btnRoast_Click;
 
-            btnRoast.Text = "Send";
+            // Status label
+            lblStatus = new Label
+            {
+                Text = "Ready",
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(240, 500),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(0, 122, 204)
+            };
+
+            // Output
+            Label lblOutput = new Label
+            {
+                Text = "Roast Result:",
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(20, 540),
+                AutoSize = true
+            };
+
+            txtOutput = new TextBox
+            {
+                Location = new Point(20, 570),
+                Size = new Size(940, 150),
+                Multiline = true,
+                ReadOnly = true,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.FromArgb(30, 30, 30),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                ScrollBars = ScrollBars.Vertical
+            };
+
+            // Add controls to form
+            this.Controls.AddRange(new Control[] {
+                lblTitle, lblRoastLevel, cmbRoastLevel,
+                lblCodeInput, _codeEditor, btnRoast,
+                lblStatus, lblOutput, txtOutput
+            });
         }
 
         private async void btnRoast_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtCodeInput.Text))
+            if (string.IsNullOrWhiteSpace(_codeEditor.Code))
             {
-                MessageBox.Show("Please enter some code or a message!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter some code first!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             btnRoast.Enabled = false;
-            string userInput = txtCodeInput.Text;
-            
-            // Add user message to conversation
-            _conversationHistory.Add(new ChatMessage { Role = "user", Content = userInput });
-            
-            // Display user message
-            AppendToChat("You", userInput);
-            txtCodeInput.Clear();
+            lblStatus.Text = "Roasting your code...";
+            string userInput = _codeEditor.Code;
 
             try
             {
                 string selectedLevel = cmbRoastLevel.SelectedItem?.ToString() ?? "Light";
                 string response = await _aiService.GenerateRoast(userInput, selectedLevel, _conversationHistory);
                 
-                // Add AI response to conversation
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = response });
-                
-                // Display AI response
-                AppendToChat("Code Roaster", response);
+                txtOutput.Text = response;
+                lblStatus.Text = "Roast complete!";
             }
             catch (Exception ex)
             {
-                AppendToChat("Error", $"An error occurred: {ex.Message}");
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "Error occurred";
             }
             finally
             {
                 btnRoast.Enabled = true;
             }
         }
-
-        private void AppendToChat(string sender, string message)
-        {
-            txtOutput.AppendText($"{sender}: {message}{Environment.NewLine}{Environment.NewLine}");
-            txtOutput.ScrollToCaret();
-        }
     }
 
     public class ChatMessage
     {
-        public string Role { get; set; }
-        public string Content { get; set; }
+        public required string Role { get; set; }
+        public required string Content { get; set; }
     }
 }

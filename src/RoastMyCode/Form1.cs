@@ -9,6 +9,10 @@ namespace RoastMyCode
         private readonly OpenAIService _openAIService;
         private Button btnCopy;
         private Button btnSave;
+        private Button btnRoast;
+        private TextBox txtOutput;
+        private TextBox txtCodeInput;
+        private ComboBox cmbRoastLevel;
 
         public Form1()
         {
@@ -33,7 +37,7 @@ namespace RoastMyCode
             };
 
             // Code input textbox
-            TextBox txtCodeInput = new TextBox
+            txtCodeInput = new TextBox
             {
                 Name = "txtCodeInput",
                 Multiline = true,
@@ -52,7 +56,7 @@ namespace RoastMyCode
             };
 
             // Roast level combobox
-            ComboBox cmbRoastLevel = new ComboBox
+            cmbRoastLevel = new ComboBox
             {
                 Name = "cmbRoastLevel",
                 Location = new Point(20, 300),
@@ -63,17 +67,17 @@ namespace RoastMyCode
             cmbRoastLevel.SelectedIndex = 0;
 
             // Roast button
-            Button btnRoast = new Button
+            btnRoast = new Button
             {
                 Name = "btnRoast",
                 Text = "Roast My Code!",
                 Location = new Point(240, 300),
                 Size = new Size(150, 30)
             };
-            btnRoast.Click += async (s, e) => await RoastCodeAsync(txtCodeInput, cmbRoastLevel);
+            btnRoast.Click += async (s, e) => await RoastCodeAsync();
 
             // Output textbox
-            TextBox txtOutput = new TextBox
+            txtOutput = new TextBox
             {
                 Name = "txtOutput",
                 Multiline = true,
@@ -92,7 +96,7 @@ namespace RoastMyCode
                 Size = new Size(120, 30),
                 Enabled = false
             };
-            btnCopy.Click += (s, e) => CopyResponse(txtOutput);
+            btnCopy.Click += (s, e) => CopyResponse();
 
             // Save button
             btnSave = new Button
@@ -102,7 +106,7 @@ namespace RoastMyCode
                 Size = new Size(120, 30),
                 Enabled = false
             };
-            btnSave.Click += (s, e) => SaveResponse(txtOutput);
+            btnSave.Click += (s, e) => SaveResponse();
 
             // Add controls to form
             this.Controls.AddRange(new Control[] {
@@ -111,7 +115,7 @@ namespace RoastMyCode
             });
         }
 
-        private async Task RoastCodeAsync(TextBox txtCodeInput, ComboBox cmbRoastLevel)
+        private async Task RoastCodeAsync()
         {
             if (string.IsNullOrWhiteSpace(txtCodeInput.Text))
             {
@@ -141,7 +145,7 @@ namespace RoastMyCode
             }
         }
 
-        private void CopyResponse(TextBox txtOutput)
+        private void CopyResponse()
         {
             if (!string.IsNullOrEmpty(txtOutput.Text))
             {
@@ -150,7 +154,7 @@ namespace RoastMyCode
             }
         }
 
-        private void SaveResponse(TextBox txtOutput)
+        private void SaveResponse()
         {
             if (string.IsNullOrEmpty(txtOutput.Text))
                 return;
