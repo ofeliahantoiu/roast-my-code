@@ -22,7 +22,7 @@ bld/
 
 # Environment files
 .env
-appsettings.json
+**/appsettings.json
 
 # NuGet Packages
 *.nupkg
