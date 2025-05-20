@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
+using System.Windows.Forms;
 
 namespace RoastMyCode.Services
 {
@@ -14,22 +16,21 @@ namespace RoastMyCode.Services
         public AIService()
         {
             var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true)
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
 
-            _apiKey = configuration["OpenRouter:ApiKey"] 
-                ?? throw new InvalidOperationException("OpenRouter API key not found. Please set the OpenRouter:ApiKey configuration value.");
-            _modelName = configuration["OpenRouter:Model"] ?? "anthropic/claude-3-opus-20240229";
+            _apiKey = configuration["OpenAI:ApiKey"] 
+                ?? throw new InvalidOperationException("OpenAI API key not found. Please set the OpenAI:ApiKey configuration value.");
+            _modelName = configuration["OpenAI:Model"] ?? "gpt-3.5-turbo";
             
             _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/yourusername/RoastMyCode");
-            _httpClient.DefaultRequestHeaders.Add("X-Title", "RoastMyCode");
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        public async Task<string> GenerateRoast(string code, string roastLevel)
+        public async Task<string> GenerateRoast(string input, string roastLevel, List<ChatMessage> conversationHistory)
         {
             try
             {
@@ -41,28 +42,30 @@ namespace RoastMyCode.Services
                     _ => "Be constructive but humorous."
                 };
 
-                var prompt = $@"You are a code reviewer with a sense of humor. Analyze the following code and provide a {roastLevel.ToLower()} roast.
-                {toneInstruction}
-                
-                Code to roast:
-                {code}
+                var messages = new List<object>
+                {
+                    new { role = "system", content = $@"You are a code reviewer with a sense of humor. Your job is to roast code and respond to questions in a funny but informative way. 
+                    {toneInstruction}
+                    Rules:
+                    1. Keep responses concise but maintain the {roastLevel.ToLower()} tone.
+                    2. When reviewing code, focus on the most critical or unique issues.
+                    3. Make it funny, creative, and specific to the code.
+                    4. Avoid generic or repetitive intros.
+                    5. You can engage in conversation while maintaining your roasting personality.
+                    6. If asked about your behavior, explain that you're a code roasting AI designed to be brutally honest." }
+                };
 
-                Rules:
-                1. Keep the response under 3 sentences.
-                2. Focus on the most critical or unique issue in the code.
-                3. Make it funny, creative, and specific to the code.
-                4. Avoid generic or repetitive intros (e.g., do NOT start with 'oh boy' or 'where do I even start').
-                5. {roastLevel.ToLower()} tone must be evident.";
+                // Add conversation history
+                foreach (var message in conversationHistory)
+                {
+                    messages.Add(new { role = message.Role, content = message.Content });
+                }
 
                 var requestBody = new
                 {
                     model = _modelName,
-                    messages = new[]
-                    {
-                        new { role = "system", content = "You are a code reviewer with a sense of humor. Your job is to roast code in a funny but informative way. Keep responses short and punchy." },
-                        new { role = "user", content = prompt }
-                    },
-                    max_tokens = 70,
+                    messages = messages,
+                    max_tokens = 250,
                     temperature = 1.0
                 };
 
@@ -72,7 +75,7 @@ namespace RoastMyCode.Services
                     "application/json"
                 );
 
-                var response = await _httpClient.PostAsync("https://openrouter.ai/api/v1/chat/completions", content);
+                var response = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
@@ -81,6 +84,7 @@ namespace RoastMyCode.Services
                     {
                         return "Sorry, we've hit the API rate limit. Please wait a few minutes before trying again.";
                     }
+                    MessageBox.Show($"API Error: {responseContent}\nStatus Code: {response.StatusCode}", "API Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return $"Error: {responseContent}";
                 }
 
