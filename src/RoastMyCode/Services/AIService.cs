@@ -16,14 +16,8 @@ namespace RoastMyCode.Services
         private readonly string _apiKey;
         private readonly string _modelName;
 
-        public AIService()
+        public AIService(IConfiguration configuration)
         {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-
             _apiKey = configuration["OpenAI:ApiKey"] 
                 ?? throw new InvalidOperationException("OpenAI API key not found. Please set the OpenAI:ApiKey configuration value.");
             _modelName = configuration["OpenAI:Model"] ?? "gpt-3.5-turbo";
@@ -55,8 +49,15 @@ namespace RoastMyCode.Services
                     3. Make it funny, creative, and specific to the code.
                     4. Avoid generic or repetitive intros.
                     5. You can engage in conversation while maintaining your roasting personality.
-                    6. If asked about your behavior, explain that you're a code roasting AI designed to be brutally honest." }
+                    6. If asked about your behavior, explain that you're a code roasting AI designed to be brutally honest.
+                    7. ALWAYS analyze the code that is provided - don't just ask for code.
+                    8. Point out specific issues in the code with line numbers or specific sections.
+                    9. Make jokes about the code style, patterns, or specific implementation choices.
+                    10. If the code is actually good, roast it anyway but in a way that acknowledges its quality." }
                 };
+
+                // Add the user's code as a message
+                messages.Add(new { role = "user", content = $"Here's my code to roast:\n\n{input}" });
 
                 // Add conversation history
                 foreach (var message in conversationHistory)
