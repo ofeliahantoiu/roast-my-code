@@ -15,8 +15,8 @@ namespace RoastMyCode.Tests.InputHandling
     [TestClass]
     public class CodeInputTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
-        private Mock<AIService> _mockAIService;
+        private Mock<IConfiguration> _mockConfiguration = null!;
+        // Removing unused field: private Mock<AIService> _mockAIService;
 
         [TestInitialize]
         public void Setup()

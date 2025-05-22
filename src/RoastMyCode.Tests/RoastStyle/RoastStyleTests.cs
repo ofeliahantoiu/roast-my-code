@@ -15,8 +15,8 @@ namespace RoastMyCode.Tests.RoastStyle
     [TestClass]
     public class RoastStyleTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
-        private string _sampleCode;
+        private Mock<IConfiguration> _mockConfiguration = null!;
+        private string _sampleCode = null!;
 
         [TestInitialize]
         public void Setup()

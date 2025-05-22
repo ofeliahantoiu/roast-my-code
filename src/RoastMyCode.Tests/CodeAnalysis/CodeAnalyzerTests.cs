@@ -16,8 +16,8 @@ namespace RoastMyCode.Tests.CodeAnalysis
     [TestClass]
     public class CodeAnalyzerTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
-        private Mock<HttpMessageHandler> _mockHttpMessageHandler;
+        private Mock<IConfiguration> _mockConfiguration = null!;
+        private Mock<HttpMessageHandler> _mockHttpMessageHandler = null!;
 
         [TestInitialize]
         public void Setup()

@@ -15,7 +15,7 @@ namespace RoastMyCode.Tests.DeveloperLevel
     [TestClass]
     public class DeveloperLevelTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
+        private Mock<IConfiguration> _mockConfiguration = null!;
 
         [TestInitialize]
         public void Setup()
