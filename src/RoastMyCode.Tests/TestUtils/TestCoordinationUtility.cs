@@ -18,7 +18,11 @@ namespace RoastMyCode.Tests.TestUtils
             _feedbackStoragePath = feedbackStoragePath;
             
             // Ensure the directory exists
-            Directory.CreateDirectory(Path.GetDirectoryName(_feedbackStoragePath));
+            var directory = Path.GetDirectoryName(_feedbackStoragePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
         }
         
         /// <summary>

@@ -177,6 +177,14 @@ namespace RoastMyCode.Tests.TestUtils
         public static void SaveTestResults(TestExecutionResults results, string filePath)
         {
             var report = GenerateMarkdownReport(results);
+            
+            // Ensure directory exists
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            
             File.WriteAllText(filePath, report);
         }
         
