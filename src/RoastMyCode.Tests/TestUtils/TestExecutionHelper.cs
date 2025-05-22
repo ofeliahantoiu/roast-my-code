@@ -208,7 +208,7 @@ namespace RoastMyCode.Tests.TestUtils
                             
                             foreach (TestCategoryAttribute attr in testCategoryAttributes)
                             {
-                                if (attr.TestCategories.Contains(category))
+                                if (attr.TestCategories != null && attr.TestCategories.Contains(category))
                                 {
                                     testMethods.Add(method);
                                     break;
@@ -220,7 +220,7 @@ namespace RoastMyCode.Tests.TestUtils
                             
                             foreach (DescriptionAttribute attr in descriptionAttributes)
                             {
-                                if (attr.Description.Contains(category))
+                                if (attr.Description != null && attr.Description.Contains(category))
                                 {
                                     testMethods.Add(method);
                                     break;
@@ -238,7 +238,7 @@ namespace RoastMyCode.Tests.TestUtils
         {
             var result = new TestResult
             {
-                TestName = $"{method.DeclaringType.Name}.{method.Name}"
+                TestName = $"{method.DeclaringType?.Name ?? "UnknownClass"}.{method.Name}"
             };
             
             var stopwatch = Stopwatch.StartNew();
@@ -246,6 +246,10 @@ namespace RoastMyCode.Tests.TestUtils
             try
             {
                 // Create an instance of the test class
+                if (method.DeclaringType == null)
+                {
+                    throw new InvalidOperationException("Cannot create instance of null type");
+                }
                 var instance = Activator.CreateInstance(method.DeclaringType);
                 
                 // Call the test method

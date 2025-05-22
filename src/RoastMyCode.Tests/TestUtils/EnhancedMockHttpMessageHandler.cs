@@ -93,7 +93,7 @@ namespace RoastMyCode.Tests.TestUtils
                 {
                     message = errorMessage,
                     type = "invalid_request_error",
-                    param = null,
+                    param = string.Empty,
                     code = "invalid_api_key"
                 }
             };
@@ -112,7 +112,7 @@ namespace RoastMyCode.Tests.TestUtils
                 {
                     message = "Rate limit exceeded",
                     type = "rate_limit_exceeded",
-                    param = null,
+                    param = string.Empty,
                     code = "rate_limit_exceeded"
                 }
             };
@@ -178,7 +178,7 @@ namespace RoastMyCode.Tests.TestUtils
                     {
                         message = "Rate limit exceeded",
                         type = "rate_limit_exceeded",
-                        param = null,
+                        param = "",
                         code = "rate_limit_exceeded"
                     }
                 };
