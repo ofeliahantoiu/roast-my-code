@@ -173,6 +173,69 @@ function factorial(n) {
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedResponse, result);
         }
+        
+        [TestMethod]
+        [Description("QA-5/BA-4: Test empty roast style parameter")]
+        public async Task EmptyRoastStyle_ShouldUseDefaultStyle()
+        {
+            // Arrange
+            var emptyRoastLevel = string.Empty;
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var expectedResponse = "This code looks like it was written by someone who just discovered programming yesterday.";
+            var mockResponse = SetupMockResponse(expectedResponse);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(_sampleCode, emptyRoastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(expectedResponse, result);
+        }
+        
+        [TestMethod]
+        [Description("QA-5/BA-4: Test case-insensitive roast style handling")]
+        public async Task CaseInsensitiveRoastStyle_ShouldWork()
+        {
+            // Arrange
+            var mixedCaseRoastLevel = "SaVaGe";
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var expectedResponse = "This code is so bad it made my compiler cry.";
+            var mockResponse = SetupMockResponse(expectedResponse);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(_sampleCode, mixedCaseRoastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(expectedResponse, result);
+        }
+        
+        [TestMethod]
+        [Description("QA-5/BA-4: Test roast style with whitespace")]
+        public async Task WhitespaceInRoastStyle_ShouldBeTrimmed()
+        {
+            // Arrange
+            var whitespaceRoastLevel = "  brutal  ";
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var expectedResponse = "This code is so terrible it should be illegal in at least 12 countries.";
+            var mockResponse = SetupMockResponse(expectedResponse);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(_sampleCode, whitespaceRoastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(expectedResponse, result);
+        }
 
         private HttpResponseMessage SetupMockResponse(string responseContent)
         {

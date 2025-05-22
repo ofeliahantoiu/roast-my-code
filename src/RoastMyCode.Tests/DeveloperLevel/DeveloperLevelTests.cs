@@ -194,6 +194,156 @@ class Counter {
             Assert.IsTrue(result.Contains("Code Tinkerer"));
             Assert.IsTrue(result.Contains("30"));
         }
+        
+        [TestMethod]
+        [Description("QA-3/BA-5: Test developer level for code with syntax errors")]
+        public async Task CodeWithSyntaxErrors_ShouldStillAssignLevel()
+        {
+            // Arrange
+            var codeWithErrors = @"
+function calculateSum(a, b) {
+    // Missing semicolon
+    let result = a + b
+    // Missing closing brace for if statement
+    if (result > 10 {
+        console.log('Result is greater than 10');
+    }
+    return result;
+}";
+            var roastLevel = "savage";
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var responseContent = @"
+{""developerLevel"": ""Syntax Struggler"", 
+""score"": 5, 
+""message"": ""Your code has so many syntax errors it's like you're trying to communicate with the computer in interpretive dance. Spoiler alert: computers don't appreciate art.""}";
+            
+            var mockResponse = SetupMockResponseWithDeveloperLevel(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(codeWithErrors, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Contains("Syntax Struggler"));
+            Assert.IsTrue(result.Contains("5"));
+        }
+        
+        [TestMethod]
+        [Description("QA-3/BA-5: Test developer level for code with mixed paradigms")]
+        public async Task MixedParadigmCode_ShouldReceiveSpecificFeedback()
+        {
+            // Arrange
+            var mixedCode = @"
+// Mixing functional and OOP paradigms
+class DataProcessor {
+    constructor(data) {
+        this.data = data;
+    }
+    
+    // OOP style method
+    processData() {
+        return this.data.map(item => this.transformItem(item));
+    }
+    
+    // Functional style method
+    transformItem(item) {
+        return item * 2;
+    }
+}
+
+// Procedural style outside the class
+function processAllData(dataArray) {
+    let results = [];
+    for (let i = 0; i < dataArray.length; i++) {
+        results.push(dataArray[i] * 2);
+    }
+    return results;
+}";
+            var roastLevel = "brutal";
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var responseContent = @"
+{""developerLevel"": ""Paradigm Juggler"", 
+""score"": 45, 
+""message"": ""You're mixing programming paradigms like you're making a cocktail. Pick a lane! Your code looks like it has multiple personality disorder.""}";
+            
+            var mockResponse = SetupMockResponseWithDeveloperLevel(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(mixedCode, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Contains("Paradigm Juggler"));
+            Assert.IsTrue(result.Contains("45"));
+        }
+        
+        [TestMethod]
+        [Description("QA-3/BA-5: Test developer level for extremely complex code")]
+        public async Task ExtremelyComplexCode_ShouldReceiveHighestLevel()
+        {
+            // Arrange
+            var complexCode = @"
+// Advanced design patterns and algorithms
+class EventEmitter {
+    constructor() {
+        this.events = new Map();
+    }
+
+    on(event, listener) {
+        if (!this.events.has(event)) {
+            this.events.set(event, []);
+        }
+        this.events.get(event).push(listener);
+        return () => this.off(event, listener);
+    }
+
+    off(event, listener) {
+        if (!this.events.has(event)) return;
+        const listeners = this.events.get(event);
+        const index = listeners.indexOf(listener);
+        if (index !== -1) listeners.splice(index, 1);
+    }
+
+    emit(event, ...args) {
+        if (!this.events.has(event)) return;
+        const listeners = this.events.get(event);
+        listeners.forEach(listener => listener(...args));
+    }
+
+    once(event, listener) {
+        const remove = this.on(event, (...args) => {
+            remove();
+            listener(...args);
+        });
+        return remove;
+    }
+}";
+            var roastLevel = "light";
+            var conversationHistory = new List<ChatMessage>();
+
+            // Setup mock response
+            var responseContent = @"
+{""developerLevel"": ""Design Pattern Virtuoso"", 
+""score"": 95, 
+""message"": ""I'm impressed. Your implementation of the observer pattern is elegant and efficient. The use of closures for the unsubscribe functionality is particularly clever.""}";
+            
+            var mockResponse = SetupMockResponseWithDeveloperLevel(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(complexCode, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Contains("Design Pattern Virtuoso"));
+            Assert.IsTrue(result.Contains("95"));
+        }
 
         private HttpResponseMessage SetupMockResponseWithDeveloperLevel(string developerLevelContent)
         {

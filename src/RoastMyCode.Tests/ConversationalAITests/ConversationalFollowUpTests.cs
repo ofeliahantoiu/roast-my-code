@@ -219,6 +219,136 @@ function calculateArea(radius) {
             
             // In a real test, we would check that it provides appropriate follow-up
         }
+        
+        [TestMethod]
+        [Description("QA-8/BA-10: Test handling of multi-turn conversations")]
+        public async Task MultiTurnConversation_ShouldMaintainContext()
+        {
+            // Arrange
+            var code = @"
+function fetchData() {
+    return fetch('https://api.example.com/data')
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            return data;
+        });
+}";
+            var roastLevel = "savage";
+            
+            // Create a conversation history with previous exchanges
+            var conversationHistory = new List<ChatMessage>
+            {
+                new ChatMessage { Role = "user", Content = "Roast this code: function add(a,b) { return a+b; }" },
+                new ChatMessage { Role = "assistant", Content = "Wow, a function that adds two numbers. Revolutionary. Did you also invent the wheel today?" },
+                new ChatMessage { Role = "user", Content = "How would you improve it?" },
+                new ChatMessage { Role = "assistant", Content = "Add type checking, handle edge cases like NaN or Infinity, and consider using TypeScript for better type safety." }
+            };
+
+            // Setup mock response that references previous conversation
+            var responseContent = @"
+{
+  ""roast"": ""First you showed me a trivial add function, and now you're fetching data without any error handling? Your code evolution is like watching a caterpillar turn into... a slightly larger caterpillar."",
+  ""followUp"": {
+    ""question"": ""Did you consider implementing the error handling improvements we discussed for your previous function in this new fetchData function?"",
+    ""context"": ""conversation_continuity""
+  }
+}";
+            
+            var mockResponse = SetupMockResponse(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(code, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(responseContent, result);
+        }
+        
+        [TestMethod]
+        [Description("QA-8/BA-10: Test handling of long conversation history")]
+        public async Task LongConversationHistory_ShouldBeHandledCorrectly()
+        {
+            // Arrange
+            var code = @"
+function calculateDiscount(price, discountCode) {
+    if (discountCode === 'SAVE10') {
+        return price * 0.9;
+    }
+    return price;
+}";
+            var roastLevel = "brutal";
+            
+            // Create a long conversation history
+            var conversationHistory = new List<ChatMessage>();
+            for (int i = 0; i < 10; i++)
+            {
+                conversationHistory.Add(new ChatMessage { Role = "user", Content = $"Question {i}: How do I improve my code?" });
+                conversationHistory.Add(new ChatMessage { Role = "assistant", Content = $"Answer {i}: Here are some suggestions..." });
+            }
+
+            // Setup mock response
+            var responseContent = @"
+{
+  ""roast"": ""After our extensive conversation about code quality, you give me THIS? A discount function that only handles one hard-coded discount code? I'm not angry, I'm just disappointed."",
+  ""followUp"": {
+    ""question"": ""We've discussed many improvements over our conversation. Which specific aspect would you like to focus on improving in this function?"",
+    ""context"": ""long_conversation_summary""
+  }
+}";
+            
+            var mockResponse = SetupMockResponse(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(code, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(responseContent, result);
+        }
+        
+        [TestMethod]
+        [Description("QA-8/BA-10: Test handling of non-code questions in conversation")]
+        public async Task NonCodeQuestions_ShouldBeHandledGracefully()
+        {
+            // Arrange
+            var code = @"
+function greet(name) {
+    return `Hello, ${name}`;
+}";
+            var roastLevel = "light";
+            
+            // Create a conversation history with non-code questions
+            var conversationHistory = new List<ChatMessage>
+            {
+                new ChatMessage { Role = "user", Content = "What's your favorite programming language?" },
+                new ChatMessage { Role = "assistant", Content = "I don't have preferences, but I can help with many languages including JavaScript, Python, C#, and more." },
+                new ChatMessage { Role = "user", Content = "How long have you been coding?" },
+                new ChatMessage { Role = "assistant", Content = "I'm an AI assistant trained to help with code, but I don't personally write code outside of helping users." }
+            };
+
+            // Setup mock response
+            var responseContent = @"
+{
+  ""roast"": ""After all those philosophical questions, you finally show me some code - and it's just a greeting function? At least your template literal syntax is correct. Baby steps, I guess."",
+  ""followUp"": {
+    ""question"": ""Now that we're looking at actual code, what specific aspect of JavaScript would you like to explore?"",
+    ""context"": ""refocus_on_code""
+  }
+}";
+            
+            var mockResponse = SetupMockResponse(responseContent);
+            var aiService = CreateMockAIService(mockResponse);
+
+            // Act
+            var result = await aiService.GenerateRoast(code, roastLevel, conversationHistory);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(responseContent, result);
+        }
 
         private HttpResponseMessage SetupMockResponse(string responseContent)
         {
