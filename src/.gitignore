@@ -22,7 +22,8 @@ bld/
 
 # Environment files
 .env
-**/appsettings.json
+# Ignore config with secrets
+src/appsettings.json
 
 # NuGet Packages
 *.nupkg

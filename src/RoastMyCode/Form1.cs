@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,429 +15,320 @@ namespace RoastMyCode
     {
         private readonly AIService _aiService;
         private List<ChatMessage> _conversationHistory;
-        private RichTextBox _codeEditor = null!;
-        private TextBox txtOutput = null!;
-        private Button btnRoast = null!;
-        private Button btnCopy = null!;
-        private Button btnSave = null!;
-        private ComboBox cmbRoastLevel = null!;
-        private Label lblStatus = null!;
-        private CheckBox chkDarkMode = null!;
-        private ComboBox cmbFontFamily = null!;
-        private ComboBox cmbFontSize = null!;
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
+        private Panel chatAreaPanel = null!;
 
         public Form1(IConfiguration configuration)
         {
             InitializeComponent();
             _aiService = new AIService(configuration);
             _conversationHistory = new List<ChatMessage>();
-            InitializeCustomComponents();
+
+            // Add an initial AI message to the conversation history
+            _conversationHistory.Add(new ChatMessage {
+                Role = "assistant",
+                Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
+            });
+
+            InitializeModernUI();
             ApplyTheme();
+
+            // Populate chat with initial messages
+            LoadConversationHistory();
         }
 
-        private void InitializeCustomComponents()
+        private void InitializeModernUI()
         {
-            // Form settings
             this.Text = "Roast My Code";
-            this.Size = new Size(1000, 800);
+            this.Size = new Size(1200, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(45, 45, 48);
+            this.BackColor = Color.Black;
             this.ForeColor = Color.White;
             this.MinimumSize = new Size(800, 600);
 
-            // Title label
-            Label lblTitle = new Label
-            {
-                Text = "Roast My Code",
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Top,
-                Height = 60
-            };
+            this.Controls.Clear();
 
-            // Create a panel for the top controls
             Panel topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,
-                BackColor = Color.FromArgb(45, 45, 48),
-                Padding = new Padding(20, 15, 20, 15)
+                Height = 80,
+                BackColor = Color.FromArgb(30, 30, 30),
+                Padding = new Padding(10)
             };
 
-            // Create a flow layout panel for the top controls
-            FlowLayoutPanel topFlowPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                AutoSize = true,
-                Padding = new Padding(10),
-                Margin = new Padding(0)
-            };
-
-            // Theme toggle
-            chkDarkMode = new CheckBox
-            {
-                Text = "Dark Mode",
-                Checked = true,
-                AutoSize = true,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 5, 20, 5)
-            };
-            chkDarkMode.CheckedChanged += chkDarkMode_CheckedChanged;
-
-            // Font customization
-            Label lblFont = new Label
-            {
-                Text = "Font:",
-                AutoSize = true,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 5, 5, 5)
-            };
-
-            cmbFontFamily = new ComboBox
-            {
-                Size = new Size(150, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 2, 20, 5)
-            };
-            cmbFontFamily.Items.AddRange(new string[] { 
-                "Consolas",      // Windows default monospace
-                "Courier New",   // Universal monospace
-                "Lucida Console", // Windows monospace
-                "Segoe UI Mono", // Windows modern monospace
-                "Terminal"       // Classic Windows monospace
-            });
-            cmbFontFamily.SelectedItem = "Consolas";
-            cmbFontFamily.SelectedIndexChanged += FontSettings_Changed;
-
-            Label lblSize = new Label
-            {
-                Text = "Size:",
-                AutoSize = true,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 5, 5, 0)
-            };
-
-            cmbFontSize = new ComboBox
-            {
-                Size = new Size(60, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 2, 20, 0)
-            };
-            cmbFontSize.Items.AddRange(new string[] { "12", "14", "16" });
-            cmbFontSize.SelectedItem = "14";
-            cmbFontSize.SelectedIndexChanged += FontSettings_Changed;
-
-            // Roast level controls
-            Label lblRoast = new Label
-            {
-                Text = "Roast Level:",
-                AutoSize = true,
-                Font = _currentFont,
-                ForeColor = Color.White,
-                Margin = new Padding(0, 5, 5, 5)
-            };
-
-            cmbRoastLevel = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = _currentFont,
-                Size = new Size(120, 25),
-                Margin = new Padding(0, 2, 20, 5),
-                Visible = true
-            };
-            cmbRoastLevel.Items.AddRange(new string[] { "Light", "Savage", "Brutal" });
-            cmbRoastLevel.SelectedIndex = 0;
-
-            // Add controls to flow panel
-            topFlowPanel.Controls.AddRange(new Control[] {
-                chkDarkMode, lblFont, cmbFontFamily, lblSize, cmbFontSize,
-                lblRoast, cmbRoastLevel
-            });
-
-            // Add flow panel to top panel
-            topPanel.Controls.Add(topFlowPanel);
-
-            // Create a panel for the main content
-            Panel mainPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10),
-                Margin = new Padding(0)
-            };
-
-            // Create split container for editor and output
-            SplitContainer splitContainer = new SplitContainer
-            {
-                Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                SplitterDistance = (int)(this.Height * 0.6),
-                FixedPanel = FixedPanel.None
-            };
-
-            // Top: Code editor + label
-            Panel editorPanel = new Panel 
-            { 
-                Dock = DockStyle.Fill,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            Label lblCode = new Label
-            {
-                Text = "Paste Your Code:",
-                Dock = DockStyle.Top,
-                Height = 30,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = _currentFont,
-                ForeColor = _isDarkMode ? Color.White : Color.Black,
-                Padding = new Padding(5, 0, 0, 0),
-                Margin = new Padding(0)
-            };
-
-            _codeEditor = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                WordWrap = false,
-                ScrollBars = RichTextBoxScrollBars.Both,
-                Font = _currentFont,
-                AcceptsTab = true,
-                BorderStyle = BorderStyle.FixedSingle,
-                BackColor = _isDarkMode ? Color.FromArgb(30, 30, 30) : Color.White,
-                ForeColor = _isDarkMode ? Color.White : Color.Black,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            // Add controls in correct order
-            editorPanel.Controls.Add(_codeEditor);
-            editorPanel.Controls.Add(lblCode);
-            lblCode.BringToFront();
-
-            // Ensure editor panel is properly docked
-            splitContainer.Panel1.Controls.Add(editorPanel);
-            editorPanel.Dock = DockStyle.Fill;
-
-            // Bottom: Output box
-            Panel outputPanel = new Panel 
-            { 
-                Dock = DockStyle.Fill,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            Label lblOutput = new Label
-            {
-                Text = "Roast Result:",
-                Dock = DockStyle.Top,
-                Height = 30,
-                Font = _currentFont,
-                TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = _isDarkMode ? Color.White : Color.Black,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            txtOutput = new TextBox
-            {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                ReadOnly = true,
-                Font = _currentFont,
-                BackColor = _isDarkMode ? Color.FromArgb(30, 30, 30) : Color.White,
-                ForeColor = _isDarkMode ? Color.White : Color.Black,
-                BorderStyle = BorderStyle.FixedSingle,
-                ScrollBars = ScrollBars.Both,
-                WordWrap = true,
-                AcceptsReturn = true,
-                AcceptsTab = true,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            outputPanel.Controls.Add(lblOutput);
-            outputPanel.Controls.Add(txtOutput);
-            txtOutput.BringToFront();
-
-            // Add panels to splitter
-            splitContainer.Panel1.Controls.Add(editorPanel);
-            splitContainer.Panel2.Controls.Add(outputPanel);
-            mainPanel.Controls.Add(splitContainer);
-
-            // Add event handler for text changes to ensure proper scrolling
-            _codeEditor.TextChanged += (s, e) =>
-            {
-                _codeEditor.SelectionStart = 0;
-                _codeEditor.ScrollToCaret();
-            };
-
-            // Button panel
-            Panel buttonPanel = new Panel
+            Panel bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 50,
-                Padding = new Padding(0),
+                Height = 60,
+                BackColor = Color.FromArgb(50, 50, 50),
+                Padding = new Padding(10)
+            };
+
+            chatAreaPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.FromArgb(30, 30, 30),
+                Padding = new Padding(10)
+            };
+
+            this.Controls.Add(chatAreaPanel);
+            this.Controls.Add(topPanel);
+            this.Controls.Add(bottomPanel);
+
+            chatFlowPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoScroll = true,
+                Padding = new Padding(0, 20, 0, 20), // Remove horizontal padding, keep vertical
                 Margin = new Padding(0)
             };
+            chatFlowPanel.ControlAdded += ChatFlowPanel_ControlAdded;
+            chatPanel.Controls.Add(chatFlowPanel);
 
-            btnRoast = new Button
-            {
-                Text = "Roast My Code!",
-                Location = new Point(0, 5),
-                Size = new Size(200, 40),
-                Font = _currentFont,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnRoast.FlatAppearance.BorderSize = 0;
-            btnRoast.Click += btnRoast_Click;
+            this.Controls.Add(chatPanel);
+            this.Controls.Add(topPanel);
+            this.Controls.Add(bottomPanel);
 
-            btnCopy = new Button
+            Panel headerContentPanel = new Panel
             {
-                Text = "Copy Code",
-                Location = new Point(220, 5),
-                Size = new Size(120, 40),
-                Font = _currentFont,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnCopy.FlatAppearance.BorderSize = 1;
-            btnCopy.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
-            btnCopy.Click += btnCopy_Click;
-
-            btnSave = new Button
-            {
-                Text = "Save Code",
-                Location = new Point(360, 5),
-                Size = new Size(120, 40),
-                Font = _currentFont,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnSave.FlatAppearance.BorderSize = 1;
-            btnSave.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
-            btnSave.Click += btnSave_Click;
-
-            lblStatus = new Label
-            {
-                Text = "Ready",
-                Font = _currentFont,
-                Location = new Point(500, 15),
+                Anchor = AnchorStyles.None,
                 AutoSize = true,
-                ForeColor = Color.FromArgb(0, 122, 204)
+                Padding = new Padding(0)
+            };
+            topPanel.Controls.Add(headerContentPanel);
+
+            pbLogo = new PictureBox
+            {
+                Size = new Size(40, 40),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(0),
+                SizeMode = PictureBoxSizeMode.StretchImage
+            };
+            LoadImageFromAssets(pbLogo, "twinkle.png");
+
+            lblTitle = new Label
+            {
+                Text = "Roast My Code",
+                Font = new Font("Segoe UI", 24, FontStyle.Regular),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                AutoSize = true,
+                Margin = new Padding(5, 0, 0, 0)
             };
 
-            buttonPanel.Controls.AddRange(new Control[] { btnRoast, btnCopy, btnSave, lblStatus });
-            mainPanel.Controls.Add(buttonPanel);
+            headerContentPanel.Controls.Add(pbLogo);
+            headerContentPanel.Controls.Add(lblTitle);
 
-            // Add panels to form
-            this.Controls.AddRange(new Control[] { lblTitle, topPanel, mainPanel });
+            pbLogo.Location = new Point(0, 0);
+            lblTitle.Location = new Point(pbLogo.Width + pbLogo.Margin.Left + pbLogo.Margin.Right, (pbLogo.Height - lblTitle.Height) / 2);
+
+            headerContentPanel.Location = new Point(
+                (topPanel.Width - headerContentPanel.Width) / 2,
+                (topPanel.Height - headerContentPanel.Height) / 2
+            );
+            headerContentPanel.Anchor = AnchorStyles.None;
+            topPanel.SizeChanged += (s, e) =>
+            {
+                headerContentPanel.Location = new Point(
+                    (topPanel.Width - headerContentPanel.Width) / 2,
+                    (topPanel.Height - headerContentPanel.Height) / 2
+                );
+            };
+
+            Panel inputContentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0)
+            };
+            bottomPanel.Controls.Add(inputContentPanel);
+
+            pbSendIcon = new PictureBox
+            {
+                Size = new Size(50, 50),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                Dock = DockStyle.Right,
+                Margin = new Padding(10, 0, 0, 0),
+                SizeMode = PictureBoxSizeMode.StretchImage
+            };
+            LoadImageFromAssets(pbSendIcon, "send.png");
+
+            pbMicIcon = new PictureBox
+            {
+                Size = new Size(30, 30),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 0, 10, 0),
+                SizeMode = PictureBoxSizeMode.StretchImage
+            };
+            LoadImageFromAssets(pbMicIcon, "mic.png");
+
+            pbCameraIcon = new PictureBox
+            {
+                Size = new Size(30, 30),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 0, 10, 0),
+                SizeMode = PictureBoxSizeMode.StretchImage
+            };
+            LoadImageFromAssets(pbCameraIcon, "camera.png");
+
+            inputContentPanel.Controls.Clear();
+
+            FlowLayoutPanel leftIconsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                Padding = new Padding(0, 12, 0, 10),
+                Margin = new Padding(0)
+            };
+            leftIconsPanel.Controls.Add(pbCameraIcon);
+            leftIconsPanel.Controls.Add(pbMicIcon);
+
+            // Configure and add the RichTextBox for input
+            rtInput = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 12),
+                BorderStyle = BorderStyle.None,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                Padding = new Padding(10, 5, 10, 5),
+                Multiline = true, // Enable multi-line
+                ScrollBars = RichTextBoxScrollBars.Vertical, // Add vertical scroll bars
+                DetectUrls = false // Disable URL detection if not needed
+            };
+
+            // Add controls to the inputContentPanel in the desired order
+            inputContentPanel.Controls.Add(rtInput); // RichTextBox takes the middle space
+            inputContentPanel.Controls.Add(pbSendIcon); // Send icon is on the right
+            inputContentPanel.Controls.Add(leftIconsPanel); // Left icons panel is on the left
+
+            chatFlowPanel.Controls.Add(leftIconsPanel); // Left icons panel docked left
+
+            chatPanel.Controls.Clear();
+            chatPanel.Controls.Add(chatFlowPanel);
+
+            pbSendIcon.Click += BtnSend_Click;
+
+            // Handle Resize event of chatFlowPanel to adjust AI bubble widths
+            chatFlowPanel.Resize += ChatFlowPanel_Resize;
         }
 
-        private void chkDarkMode_CheckedChanged(object? sender, EventArgs e)
+        private void ChatFlowPanel_Resize(object? sender, EventArgs e)
         {
-            _isDarkMode = chkDarkMode.Checked;
-            ApplyTheme();
+            // When the FlowLayoutPanel resizes, we need to update the width and position of the bubbles.
+            int panelWidth = chatFlowPanel.ClientSize.Width;
+
+            // Ensure panelWidth is positive before using it
+            if (panelWidth <= 0) return;
+
+            // Calculate the desired bubble width (70% of panel width minus horizontal padding/margins)
+            int desiredBubbleWidth = (int)(panelWidth * 0.70) - chatFlowPanel.Padding.Horizontal - (chatFlowPanel.Controls.Count > 0 ? chatFlowPanel.Controls[0].Margin.Horizontal : 0); // Account for potential bubble margin
+            if (desiredBubbleWidth < 1) desiredBubbleWidth = 1; // Ensure minimum width
+
+            // Manually position and size controls
+            foreach (Control control in chatFlowPanel.Controls)
+            {
+                if (control is ChatMessageBubble bubble)
+                {
+                    // Set the bubble's width and maximum size
+                    bubble.Width = desiredBubbleWidth;
+                    bubble.MaximumSize = new Size(bubble.Width, 0);
+
+                    // Set the bubble's horizontal position based on role
+                    if (bubble.Role == "user")
+                    {
+                        // Align right: set Left to panel width minus right padding minus bubble width
+                        bubble.Left = panelWidth - chatFlowPanel.Padding.Right - bubble.Width;
+                    }
+                    else // AI/System message: align left
+                    {
+                        // Align left: set Left to panel left padding
+                        bubble.Left = chatFlowPanel.Padding.Left;
+                    }
+
+                    // Trigger layout update for the bubble
+                    bubble.PerformLayout();
+                }
+            }
+            // Ensure the panel invalidates to redraw controls with updated sizes
+            chatFlowPanel.Invalidate(true);
+            // Update AutoScrollMinSize to reflect the total height of manually placed controls
+            // The FlowLayoutPanel will calculate AutoScrollMinSize automatically based on control positions
+
+            // Request the FlowLayoutPanel to re-layout based on manual changes
+            chatFlowPanel.PerformLayout();
         }
 
-        private void FontSettings_Changed(object? sender, EventArgs e)
+        private void LoadConversationHistory()
         {
-            ApplyFontSettings();
-        }
-
-        private void ApplyFontSettings()
-        {
-            if (cmbFontFamily.SelectedItem == null || cmbFontSize.SelectedItem == null)
-                return;
-
-            try
+            chatFlowPanel.Controls.Clear();
+            foreach (var message in _conversationHistory)
             {
-                string fontFamily = cmbFontFamily.SelectedItem.ToString()!;
-                float fontSize = float.Parse(cmbFontSize.SelectedItem.ToString()!);
-                
-                // Create new font with proper style
-                _currentFont = new Font(fontFamily, fontSize, FontStyle.Regular, GraphicsUnit.Point);
-
-                // Apply font to all controls
-                ApplyFontToControl(this, _currentFont);
-
-                // Adjust button sizes based on new font
-                AdjustButtonSizes();
-
-                // Force layout recalculation
-                this.PerformLayout();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error applying font: {ex.Message}", "Font Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                // Reset to default font
-                _currentFont = new Font("Consolas", 14);
-                cmbFontFamily.SelectedItem = "Consolas";
-                cmbFontSize.SelectedItem = "14";
-            }
-        }
-
-        private void ApplyFontToControl(Control control, Font font)
-        {
-            // Apply font to the control itself
-            if (control is TextBox || control is RichTextBox)
-            {
-                control.Font = font;
-                control.Invalidate();  // Force redraw
-                control.PerformLayout(); // Force layout recalculation
-            }
-            else if (control is Label || control is Button || control is ComboBox)
-            {
-                control.Font = font;
-                control.Invalidate();  // Force redraw
-                control.PerformLayout(); // Force layout recalculation
-            }
-
-            // Recursively apply to child controls
-            foreach (Control child in control.Controls)
-            {
-                ApplyFontToControl(child, font);
+                AddChatMessage(message.Content, message.Role);
             }
         }
 
-        private void AdjustButtonSizes()
+        private void LoadImageFromAssets(PictureBox pictureBox, string imageName)
         {
-            // Calculate text sizes for buttons
-            using (Graphics g = CreateGraphics())
+            // Get the directory of the currently executing assembly
+            string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
+
+            // Construct the path to the assets folder relative to the assembly directory.
+            // This assumes the assets folder is in the project root, which is a couple of directories up
+            // from the typical bin\[Debug|Release]\[TargetFramework] directory.
+            // This path construction might need adjustment based on your exact project structure and build output.
+            string projectDirectory = Directory.GetParent(assemblyDirectory!)!.Parent!.Parent!.FullName; // Adjust the number of .Parent! based on your structure
+            string assetsPath = Path.Combine(projectDirectory, "assets", imageName);
+
+            if (File.Exists(assetsPath))
             {
-                SizeF roastSize = g.MeasureString(btnRoast.Text, btnRoast.Font);
-                SizeF copySize = g.MeasureString(btnCopy.Text, btnCopy.Font);
-                SizeF saveSize = g.MeasureString(btnSave.Text, btnSave.Font);
+                try
+                {
+                    // Use Image.FromFile to load the image
+                    pictureBox.Image = Image.FromFile(assetsPath);
+                     // Dispose of the image later when the form is closed to release the file handle
+                     this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
+                }
+                catch (Exception ex)
+                {
+                    // Handle potential errors during image loading
+                    MessageBox.Show($"Error loading image {imageName} from {assetsPath}: {ex.Message}", "Image Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                // Handle case where image file is not found
+                MessageBox.Show($"Image file not found at: {assetsPath}", "Image Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
-                // Set minimum widths and add padding
-                int padding = 20;
-                btnRoast.Width = Math.Max(200, (int)roastSize.Width + padding);
-                btnCopy.Width = Math.Max(120, (int)copySize.Width + padding);
-                btnSave.Width = Math.Max(120, (int)saveSize.Width + padding);
-
-                // Adjust button panel height if needed
-                int buttonHeight = Math.Max(40, (int)Math.Max(Math.Max(roastSize.Height, copySize.Height), saveSize.Height) + 20);
-                btnRoast.Height = buttonHeight;
-                btnCopy.Height = buttonHeight;
-                btnSave.Height = buttonHeight;
-
-                // Update button locations
-                btnCopy.Location = new Point(btnRoast.Right + 10, btnRoast.Top);
-                btnSave.Location = new Point(btnCopy.Right + 10, btnCopy.Top);
-                lblStatus.Location = new Point(btnSave.Right + 20, btnSave.Top + (buttonHeight - lblStatus.Height) / 2);
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            if (this.ClientSize.Width > 0 && this.ClientSize.Height > 0)
+            {
+                using (LinearGradientBrush brush = new LinearGradientBrush(
+                    this.ClientRectangle,
+                    Color.FromArgb(28, 13, 29),
+                    Color.FromArgb(92, 30, 30),
+                    LinearGradientMode.Vertical))
+                {
+                    e.Graphics.FillRectangle(brush, this.ClientRectangle);
+                }
             }
         }
 
@@ -448,40 +340,39 @@ namespace RoastMyCode
             Color buttonBackColor = _isDarkMode ? Color.FromArgb(45, 45, 48) : Color.White;
             Color accentColor = Color.FromArgb(0, 122, 204);
 
-            // Set form colors
             this.BackColor = backColor;
             this.ForeColor = textColor;
 
-            // Apply theme to all controls recursively
             ApplyThemeToControl(this, _isDarkMode, textColor, backColor, editorBackColor, buttonBackColor, accentColor);
 
-            // Ensure code editor and output maintain their fonts
-            _codeEditor.Font = _currentFont;
-            txtOutput.Font = _currentFont;
-            btnRoast.Font = _currentFont;
-            btnCopy.Font = _currentFont;
-            btnSave.Font = _currentFont;
-            lblStatus.Font = _currentFont;
+            _currentFont = new Font("Segoe UI", 10);
+            ApplyFontToControl(this, _currentFont);
+            AdjustButtonSizes();
+            this.PerformLayout();
         }
 
         private void ApplyThemeToControl(Control control, bool isDarkMode, Color textColor, Color backColor, Color editorBackColor, Color buttonBackColor, Color accentColor)
         {
-            // Skip the title label as it should always be accent color
             if (control is Label titleLabel && titleLabel.Text == "Roast My Code")
             {
                 titleLabel.ForeColor = accentColor;
                 return;
             }
 
-            // Set base colors
             control.BackColor = backColor;
             control.ForeColor = textColor;
 
-            // Handle specific control types
             if (control is TextBox textBox)
             {
-                textBox.BackColor = editorBackColor;
-                textBox.ForeColor = textColor;
+                if (!string.IsNullOrWhiteSpace(rtInput.Text))
+                {
+                    textBox.ForeColor = textColor;
+                }
+                else
+                {
+                    textBox.BackColor = editorBackColor;
+                    textBox.ForeColor = textColor;
+                }
                 textBox.Invalidate();
             }
             else if (control is RichTextBox richTextBox)
@@ -489,20 +380,6 @@ namespace RoastMyCode
                 richTextBox.BackColor = editorBackColor;
                 richTextBox.ForeColor = textColor;
                 richTextBox.Invalidate();
-            }
-            else if (control is Button button)
-            {
-                if (button == btnRoast)
-                {
-                    button.BackColor = accentColor;
-                    button.ForeColor = Color.White;
-                }
-                else
-                {
-                    button.BackColor = buttonBackColor;
-                    button.ForeColor = textColor;
-                }
-                button.Invalidate();
             }
             else if (control is ComboBox comboBox)
             {
@@ -520,118 +397,182 @@ namespace RoastMyCode
                 label.ForeColor = textColor;
                 label.Invalidate();
             }
+            else if (control is PictureBox pb)
+            {
+                // PictureBoxes typically don't have backgrounds/forecolors in the same way
+                // as other controls, but you might adjust backcolor if not transparent.
+                // pb.BackColor = backColor;
+            }
 
-            // Recursively apply to child controls
             foreach (Control child in control.Controls)
             {
                 ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor, accentColor);
             }
         }
 
-        private async void btnRoast_Click(object? sender, EventArgs e)
+        private void ApplyFontToControl(Control control, Font font)
         {
-            if (string.IsNullOrWhiteSpace(_codeEditor.Text))
+            if (control is TextBox || control is RichTextBox)
             {
-                MessageBox.Show("Please enter some code first!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                control.Font = font;
+                control.Invalidate();
+                control.PerformLayout();
+            }
+            else if (control is Label || control is Button || control is ComboBox)
+            {
+                control.Font = font;
+                control.Invalidate();
+                control.PerformLayout();
             }
 
-            btnRoast.Enabled = false;
-            lblStatus.Text = "Roasting your code...";
-            string userInput = _codeEditor.Text;
-
-            try
+            foreach (Control child in control.Controls)
             {
-                string selectedLevel = cmbRoastLevel.SelectedItem?.ToString() ?? "Light";
-                string response = await _aiService.GenerateRoast(userInput, selectedLevel, _conversationHistory);
-                
-                _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = response });
-                txtOutput.Text = response;
-                lblStatus.Text = "Roast complete!";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "Error occurred";
-            }
-            finally
-            {
-                btnRoast.Enabled = true;
+                ApplyFontToControl(child, font);
             }
         }
 
-        private void btnCopy_Click(object? sender, EventArgs e)
+        private void AdjustButtonSizes()
         {
-            if (string.IsNullOrWhiteSpace(_codeEditor.Text))
+            if (pbLogo != null && lblTitle != null)
             {
-                MessageBox.Show("No code to copy!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            try
-            {
-                Clipboard.SetText(_codeEditor.Text);
-                lblStatus.Text = "Code copied to clipboard!";
-                
-                // Reset status after 2 seconds
-                var timer = new System.Windows.Forms.Timer();
-                timer.Interval = 2000;
-                timer.Tick += (s, args) =>
-                {
-                    lblStatus.Text = "Ready";
-                    timer.Stop();
-                    timer.Dispose();
-                };
-                timer.Start();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error copying to clipboard: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "Error copying code";
+                lblTitle.Location = new Point(pbLogo.Right + lblTitle.Margin.Left, (pbLogo.Height - lblTitle.Height) / 2);
             }
         }
 
-        private void btnSave_Click(object? sender, EventArgs e)
+        private async void BtnSend_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(_codeEditor.Text))
+            string userMessageText = rtInput.Text;
+            if (!string.IsNullOrWhiteSpace(userMessageText))
             {
-                MessageBox.Show("No code to save!", "Empty Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                AddChatMessage(userMessageText, "user");
+                _conversationHistory.Add(new ChatMessage { Role = "user", Content = userMessageText });
+                rtInput.Clear();
 
-            using (SaveFileDialog saveDialog = new SaveFileDialog())
-            {
-                saveDialog.Filter = "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
-                saveDialog.FilterIndex = 1;
-                saveDialog.DefaultExt = "cs";
-                saveDialog.Title = "Save Code";
-                saveDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                rtInput.Enabled = false;
+                pbSendIcon.Enabled = false;
 
-                if (saveDialog.ShowDialog() == DialogResult.OK)
+                try
                 {
-                    try
-                    {
-                        File.WriteAllText(saveDialog.FileName, _codeEditor.Text);
-                        lblStatus.Text = "Code saved successfully!";
-                        
-                        // Reset status after 2 seconds
-                        var timer = new System.Windows.Forms.Timer();
-                        timer.Interval = 2000;
-                        timer.Tick += (s, args) =>
-                        {
-                            lblStatus.Text = "Ready";
-                            timer.Stop();
-                            timer.Dispose();
-                        };
-                        timer.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        lblStatus.Text = "Error saving code";
-                    }
+                    string selectedLevel = "Savage";
+                    string aiResponse = await _aiService.GenerateRoast(userMessageText, selectedLevel, _conversationHistory);
+
+                    AddChatMessage(aiResponse, "assistant");
+                    _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                }
+                catch (Exception ex)
+                {
+                    AddChatMessage($"Error: {ex.Message}", "system");
+                }
+                finally
+                {
+                    rtInput.Enabled = true;
+                    pbSendIcon.Enabled = true;
                 }
             }
+        }
+
+        private void AddChatMessage(string message, string role)
+        {
+            // Create a new ChatMessageBubble
+            ChatMessageBubble bubble = new ChatMessageBubble
+            {
+                MessageText = message,
+                Role = role,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Font = new Font("Segoe UI", 12),
+                Margin = new Padding(0, 5, 0, 5) // Add vertical margin between bubbles
+            };
+
+            // Add the bubble to the chat area panel
+            chatAreaPanel.Controls.Add(bubble);
+
+            // Position the new bubble and update layout
+            PositionChatBubbles();
+
+            // Scroll to the latest message when added.
+            if (chatAreaPanel.VerticalScroll.Visible)
+            {
+                chatAreaPanel.ScrollControlIntoView(bubble);
+            }
+        }
+
+        private void ChatFlowPanel_ControlAdded(object? sender, ControlEventArgs e)
+        {
+            // Handle any necessary logic when a new control is added to the chat panel
+            if (e.Control is ChatMessageBubble bubble)
+            {
+                // Ensure the new bubble is properly sized and positioned
+                bubble.PerformLayout();
+            }
+        }
+
+        private void ChatAreaPanel_Resize(object? sender, EventArgs e)
+        {
+            // When the chat area panel resizes, update the position and size of chat bubbles
+            PositionChatBubbles();
+        }
+
+        private void Form1_Resize(object? sender, EventArgs e)
+        {
+            // Trigger chat area panel resize when the form resizes
+            if (chatAreaPanel != null) chatAreaPanel.PerformLayout();
+        }
+
+        private void PositionChatBubbles()
+        {
+            // This method will be responsible for positioning and sizing all chat bubbles
+            // within the chatAreaPanel to create the chat conversation layout.
+
+            int panelWidth = chatAreaPanel.ClientSize.Width;
+            if (panelWidth <= 0) return; // Ensure valid panel width
+
+            // Calculate available width for bubbles (panel width minus padding)
+            int availableWidth = panelWidth - chatAreaPanel.Padding.Horizontal;
+
+            // Calculate the desired bubble width (70% of available width)
+            int desiredBubbleWidth = (int)(availableWidth * 0.70);
+            if (desiredBubbleWidth < 100) desiredBubbleWidth = 100; // Ensure minimum width
+
+            int currentY = chatAreaPanel.Padding.Top; // Start positioning below top padding
+
+            // Iterate through all controls (ChatMessageBubbles) in the chat area panel
+            foreach (Control control in chatAreaPanel.Controls)
+            {
+                if (control is ChatMessageBubble bubble)
+                {
+                    // Set the bubble's width and maximum size based on calculation
+                    bubble.Width = desiredBubbleWidth;
+                    bubble.MaximumSize = new Size(bubble.Width, 0); // Lock maximum width
+
+                    // Trigger layout on the bubble to calculate its required height based on text wrapping
+                    bubble.PerformLayout();
+
+                    // Calculate and set the bubble's horizontal position based on role
+                    if (bubble.Role == "user")
+                    {
+                        // User message: align to the right
+                        bubble.Left = panelWidth - chatAreaPanel.Padding.Right - bubble.Width;
+                    }
+                    else // Assistant or System message: align to the left
+                    {
+                        // Align to the left
+                        bubble.Left = chatAreaPanel.Padding.Left;
+                    }
+
+                    // Set the bubble's vertical position
+                    bubble.Top = currentY;
+
+                    // Update the vertical position for the next bubble, including margin
+                    currentY += bubble.Height + bubble.Margin.Vertical;
+                }
+            }
+
+            // Update the AutoScrollMinSize to enable scrolling if content exceeds panel height
+            chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + chatAreaPanel.Padding.Bottom);
+
+            // Invalidate the panel to ensure it redraws with updated control positions
+            chatAreaPanel.Invalidate(true);
         }
     }
 
