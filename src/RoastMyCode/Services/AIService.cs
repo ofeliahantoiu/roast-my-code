@@ -56,10 +56,8 @@ namespace RoastMyCode.Services
                     10. If the code is actually good, roast it anyway but in a way that acknowledges its quality." }
                 };
 
-                // Add the user's code as a message
                 messages.Add(new { role = "user", content = $"Here's my code to roast:\n\n{input}" });
 
-                // Add conversation history
                 foreach (var message in conversationHistory)
                 {
                     messages.Add(new { role = message.Role, content = message.Content });

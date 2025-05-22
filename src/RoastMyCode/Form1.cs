@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -25,7 +25,6 @@ namespace RoastMyCode
             _aiService = new AIService(configuration);
             _conversationHistory = new List<ChatMessage>();
 
-            // Add an initial AI message to the conversation history
             _conversationHistory.Add(new ChatMessage {
                 Role = "assistant",
                 Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
@@ -34,7 +33,6 @@ namespace RoastMyCode
             InitializeModernUI();
             ApplyTheme();
 
-            // Populate chat with initial messages
             LoadConversationHistory();
         }
 
@@ -70,27 +68,12 @@ namespace RoastMyCode
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = Color.FromArgb(30, 30, 30),
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                AutoScrollMinSize = new Size(0, 0)
             };
+            chatAreaPanel.Scroll += ChatAreaPanel_Scroll;
 
             this.Controls.Add(chatAreaPanel);
-            this.Controls.Add(topPanel);
-            this.Controls.Add(bottomPanel);
-
-            chatFlowPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoSize = true,
-                AutoScroll = true,
-                Padding = new Padding(0, 20, 0, 20), // Remove horizontal padding, keep vertical
-                Margin = new Padding(0)
-            };
-            chatFlowPanel.ControlAdded += ChatFlowPanel_ControlAdded;
-            chatPanel.Controls.Add(chatFlowPanel);
-
-            this.Controls.Add(chatPanel);
             this.Controls.Add(topPanel);
             this.Controls.Add(bottomPanel);
 
@@ -197,7 +180,6 @@ namespace RoastMyCode
             leftIconsPanel.Controls.Add(pbCameraIcon);
             leftIconsPanel.Controls.Add(pbMicIcon);
 
-            // Configure and add the RichTextBox for input
             rtInput = new RichTextBox
             {
                 Dock = DockStyle.Fill,
@@ -206,9 +188,18 @@ namespace RoastMyCode
                 BackColor = Color.White,
                 ForeColor = Color.Black,
                 Padding = new Padding(10, 5, 10, 5),
-                Multiline = true, // Enable multi-line
-                ScrollBars = RichTextBoxScrollBars.Vertical, // Add vertical scroll bars
-                DetectUrls = false // Disable URL detection if not needed
+                Multiline = true,
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                DetectUrls = false
+            };
+
+            rtInput.KeyDown += (sender, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && !e.Shift)
+                {
+                    e.SuppressKeyPress = true;
+                    BtnSend_Click(sender, e);
+                }
             };
 
             // Add controls to the inputContentPanel in the desired order
@@ -275,7 +266,13 @@ namespace RoastMyCode
 
         private void LoadConversationHistory()
         {
+            // Clear existing controls
             chatFlowPanel.Controls.Clear();
+            
+            // Add initial message
+            AddChatMessage("Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\"", "assistant");
+            
+            // Add any additional messages from conversation history
             foreach (var message in _conversationHistory)
             {
                 AddChatMessage(message.Content, message.Role);
@@ -481,7 +478,7 @@ namespace RoastMyCode
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Font = new Font("Segoe UI", 12),
-                Margin = new Padding(0, 5, 0, 5) // Add vertical margin between bubbles
+                Margin = new Padding(10, 5, 10, 5) // Add proper vertical margin between bubbles
             };
 
             // Add the bubble to the chat area panel
@@ -490,7 +487,7 @@ namespace RoastMyCode
             // Position the new bubble and update layout
             PositionChatBubbles();
 
-            // Scroll to the latest message when added.
+            // Scroll to the latest message
             if (chatAreaPanel.VerticalScroll.Visible)
             {
                 chatAreaPanel.ScrollControlIntoView(bubble);
@@ -515,8 +512,12 @@ namespace RoastMyCode
 
         private void Form1_Resize(object? sender, EventArgs e)
         {
-            // Trigger chat area panel resize when the form resizes
-            if (chatAreaPanel != null) chatAreaPanel.PerformLayout();
+            // Handle form resize
+            if (chatAreaPanel != null)
+            {
+                chatAreaPanel.PerformLayout();
+                PositionChatBubbles(); // Re-position bubbles after resize
+            }
         }
 
         private void PositionChatBubbles()
@@ -551,13 +552,13 @@ namespace RoastMyCode
                     // Calculate and set the bubble's horizontal position based on role
                     if (bubble.Role == "user")
                     {
-                        // User message: align to the right
-                        bubble.Left = panelWidth - chatAreaPanel.Padding.Right - bubble.Width;
+                        // User message: align to the right with proper padding
+                        bubble.Left = panelWidth - chatAreaPanel.Padding.Right - bubble.Width - 10;
                     }
                     else // Assistant or System message: align to the left
                     {
-                        // Align to the left
-                        bubble.Left = chatAreaPanel.Padding.Left;
+                        // Align to the left with proper padding
+                        bubble.Left = chatAreaPanel.Padding.Left + 10;
                     }
 
                     // Set the bubble's vertical position
@@ -568,11 +569,30 @@ namespace RoastMyCode
                 }
             }
 
-            // Update the AutoScrollMinSize to enable scrolling if content exceeds panel height
-            chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + chatAreaPanel.Padding.Bottom);
+            // Update the AutoScrollMinSize based on content height
+            chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + 50); // Add small padding for scrolling
 
             // Invalidate the panel to ensure it redraws with updated control positions
             chatAreaPanel.Invalidate(true);
+
+            // Always scroll to the latest message
+            if (chatAreaPanel.Controls.Count > 0)
+            {
+                // Scroll to the latest message
+                chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
+                
+                // Force scroll to bottom
+                chatAreaPanel.VerticalScroll.Value = chatAreaPanel.VerticalScroll.Maximum;
+            }
+        }
+
+        private void ChatAreaPanel_Scroll(object? sender, ScrollEventArgs e)
+        {
+            // When the panel scrolls, ensure we're always at the bottom
+            if (chatAreaPanel.VerticalScroll.Visible)
+            {
+                chatAreaPanel.VerticalScroll.Value = chatAreaPanel.VerticalScroll.Maximum;
+            }
         }
     }
 
