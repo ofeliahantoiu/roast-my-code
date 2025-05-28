@@ -1,4 +1,4 @@
-﻿﻿namespace RoastMyCode
+﻿﻿﻿﻿namespace RoastMyCode
 {
     partial class Form1
     {
