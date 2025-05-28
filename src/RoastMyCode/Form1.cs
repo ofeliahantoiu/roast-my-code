@@ -27,6 +27,7 @@ namespace RoastMyCode
         private PictureBox pbCameraIcon = null!;
         private PictureBox pbMicIcon = null!;
         private PictureBox pbSendIcon = null!;
+        private PictureBox pbGradientBackground = null!;
 
         public Form1(IConfiguration configuration)
         {
@@ -55,6 +56,18 @@ namespace RoastMyCode
             this.MinimumSize = new Size(800, 600);
 
             this.Controls.Clear();
+
+            // Add gradient background
+            pbGradientBackground = new PictureBox
+            {
+                Dock = DockStyle.Bottom,
+                Height = this.ClientSize.Height / 2,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                BackColor = Color.Transparent
+            };
+            LoadImageFromAssets(pbGradientBackground, "gradient.png");
+            this.Controls.Add(pbGradientBackground);
+            pbGradientBackground.SendToBack();
 
             Panel topPanel = new Panel
             {
@@ -812,6 +825,10 @@ namespace RoastMyCode
 
         private void Form1_Resize(object? sender, EventArgs e)
         {
+            if (pbGradientBackground != null)
+            {
+                pbGradientBackground.Height = this.ClientSize.Height / 2;
+            }
             PositionChatAreaPanel();
         }
 
