@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using RoastMyCode.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -900,6 +902,76 @@ namespace RoastMyCode
             LoadImageFromAssets(pbThemeToggle, _isDarkMode ? "brightness.png" : "moon.png");
         }
 
+        private string[] codeExtensions = new[] { ".cs", ".js", ".ts", ".py", ".java", ".cpp", ".c", ".h", 
+            ".hpp", ".php", ".rb", ".go", ".rs", ".swift", ".kt", ".dart", ".sh", ".ps1", 
+            ".bat", ".cmd", ".html", ".css", ".xml", ".json", ".yaml", ".yml", ".md", ".txt" };
+
+        private (string content, string error) ProcessZipFile(string zipPath)
+        {
+            try
+            {
+                string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                Directory.CreateDirectory(tempDir);
+                string result = string.Empty;
+                List<string> processedFiles = new List<string>();
+
+                try
+                {
+                    // Extract all files
+                    ZipFile.ExtractToDirectory(zipPath, tempDir);
+
+                    // Get all code files in the extracted directory
+                    var codeFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
+                        .Where(f => codeExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                        .OrderBy(f => f)
+                        .ToList();
+
+                    if (codeFiles.Count == 0)
+                    {
+                        return ($"No code files found in {Path.GetFileName(zipPath)}", string.Empty);
+                    }
+
+                    // Try to identify main entry points
+                    var possibleMains = codeFiles.Where(f => 
+                        f.IndexOf("program", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        f.IndexOf("main", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        f.IndexOf("app", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        f.IndexOf("index", StringComparison.OrdinalIgnoreCase) >= 0)
+                        .ToList();
+
+                    // Process main files first, then others
+                    var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
+
+                    foreach (string file in filesToProcess)
+                    {
+                        try
+                        {
+                            string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                            string content = File.ReadAllText(file);
+                            result += $"=== {relativePath} ===\n{content}\n\n";
+                            processedFiles.Add(relativePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            result += $"Error reading {Path.GetFileName(file)}: {ex.Message}\n\n";
+                        }
+                    }
+
+                    return (result, string.Empty);
+                }
+                finally
+                {
+                    // Clean up extracted files
+                    try { Directory.Delete(tempDir, true); }
+                    catch { /* Ignore cleanup errors */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                return (string.Empty, $"Error processing ZIP file: {ex.Message}");
+            }
+        }
+
         private void PbCameraIcon_Click(object? sender, EventArgs e)
         {
             try
@@ -907,25 +979,41 @@ namespace RoastMyCode
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Multiselect = true;
-                    openFileDialog.Filter = "Code Files|*.cs;*.js;*.ts;*.py;*.java;*.cpp;*.c;*.h;*.hpp;*.php;*.rb;*.go;*.rs;*.swift;*.kt;*.dart;*.sh;*.ps1;*.bat;*.cmd;*.html;*.css;*.xml;*.json;*.yaml;*.yml;*.md;*.txt|All Files|*.*";
-                    openFileDialog.Title = "Select Code Files to Upload";
+                    openFileDialog.Filter = "Code Files|*.cs;*.js;*.ts;*.py;*.java;*.cpp;*.c;*.h;*.hpp;*.php;*.rb;*.go;*.rs;*.swift;*.kt;*.dart;*.sh;*.ps1;*.bat;*.cmd;*.html;*.css;*.xml;*.json;*.yaml;*.yml;*.md;*.txt|ZIP Archives|*.zip|All Files|*.*";
+                    openFileDialog.Title = "Select Code Files or ZIP Archives to Upload";
                     openFileDialog.CheckFileExists = true;
                     openFileDialog.CheckPathExists = true;
 
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
                         List<string> fileContents = new List<string>();
+                        
                         foreach (string fileName in openFileDialog.FileNames)
                         {
                             try 
                             {
-                                string content = File.ReadAllText(fileName);
-                                string displayName = Path.GetFileName(fileName);
-                                fileContents.Add($"=== {displayName} ===\n{content}");
+                                if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var (content, error) = ProcessZipFile(fileName);
+                                    if (!string.IsNullOrEmpty(error))
+                                    {
+                                        fileContents.Add($"Error processing {Path.GetFileName(fileName)}: {error}");
+                                    }
+                                    else if (!string.IsNullOrEmpty(content))
+                                    {
+                                        fileContents.Add($"=== Contents of {Path.GetFileName(fileName)} ===\n{content}");
+                                    }
+                                }
+                                else
+                                {
+                                    string content = File.ReadAllText(fileName);
+                                    string displayName = Path.GetFileName(fileName);
+                                    fileContents.Add($"=== {displayName} ===\n{content}");
+                                }
                             }
                             catch (Exception ex)
                             {
-                                fileContents.Add($"Error reading {Path.GetFileName(fileName)}: {ex.Message}");
+                                fileContents.Add($"Error processing {Path.GetFileName(fileName)}: {ex.Message}");
                             }
                         }
 
