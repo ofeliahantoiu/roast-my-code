@@ -19,6 +19,7 @@ namespace RoastMyCode
         private List<ChatMessage> _conversationHistory;
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
+        private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>(); // Stores file paths and their content
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
@@ -833,6 +834,13 @@ namespace RoastMyCode
                 pbGradientBackground.Height = this.ClientSize.Height / 2;
             }
             PositionChatAreaPanel();
+            
+            // Update download button position on resize
+            var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
+            if (downloadButton != null)
+            {
+                downloadButton.Location = new Point(this.ClientSize.Width - downloadButton.Width - 20, 10);
+            }
         }
 
         private void PositionChatBubbles()
@@ -900,6 +908,103 @@ namespace RoastMyCode
         private void UpdateThemeIcon()
         {
             LoadImageFromAssets(pbThemeToggle, _isDarkMode ? "brightness.png" : "moon.png");
+        }
+
+        private void ShowDownloadButton()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ShowDownloadButton));
+                return;
+            }
+
+            // Remove existing download button if any
+            var existingButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
+            existingButton?.Dispose();
+
+            var downloadButton = new Button
+            {
+                Name = "btnDownloadBundle",
+                Text = "Download Code Bundle",
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Padding = new Padding(15, 5, 15, 5),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(this.ClientSize.Width - 220, 10)
+            };
+
+            downloadButton.Click += (s, e) => DownloadCodeBundle();
+            
+            // Add hover effects
+            downloadButton.MouseEnter += (s, e) => {
+                downloadButton.BackColor = Color.FromArgb(0, 100, 180);
+            };
+            downloadButton.MouseLeave += (s, e) => {
+                downloadButton.BackColor = Color.FromArgb(0, 120, 215);
+            };
+
+            this.Controls.Add(downloadButton);
+            downloadButton.BringToFront();
+        }
+
+        private void DownloadCodeBundle()
+        {
+            if (_uploadedFiles.Count == 0)
+            {
+                AddChatMessage("No files available to download.", "system");
+                return;
+            }
+
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "ZIP Archive|*.zip";
+                saveFileDialog.Title = "Save Code Bundle";
+                saveFileDialog.FileName = $"code_bundle_{DateTime.Now:yyyyMMddHHmmss}.zip";
+                
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                        Directory.CreateDirectory(tempDir);
+
+                        try
+                        {
+                            // Save all files to temp directory
+                            foreach (var file in _uploadedFiles)
+                            {
+                                string filePath = Path.Combine(tempDir, file.Key);
+                                File.WriteAllText(filePath, file.Value);
+                            }
+
+                            // Create ZIP
+                            if (File.Exists(saveFileDialog.FileName))
+                            {
+                                File.Delete(saveFileDialog.FileName);
+                            }
+                            
+                            ZipFile.CreateFromDirectory(tempDir, saveFileDialog.FileName);
+                            
+                            AddChatMessage($"Code bundle saved successfully: {Path.GetFileName(saveFileDialog.FileName)}", "system");
+                        }
+                        finally
+                        {
+                            // Clean up temp directory
+                            try { Directory.Delete(tempDir, true); }
+                            catch { /* Ignore cleanup errors */ }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AddChatMessage($"Error creating code bundle: {ex.Message}", "system");
+                    }
+                }
+            }
         }
 
         private string[] codeExtensions = new[] { ".cs", ".js", ".ts", ".py", ".java", ".cpp", ".c", ".h", 
@@ -987,6 +1092,7 @@ namespace RoastMyCode
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
                         List<string> fileContents = new List<string>();
+                        _uploadedFiles.Clear(); // Clear previous uploads when starting a new one
                         
                         foreach (string fileName in openFileDialog.FileNames)
                         {
@@ -1008,6 +1114,7 @@ namespace RoastMyCode
                                 {
                                     string content = File.ReadAllText(fileName);
                                     string displayName = Path.GetFileName(fileName);
+                                    _uploadedFiles[displayName] = content; // Store file content with its name as key
                                     fileContents.Add($"=== {displayName} ===\n{content}");
                                 }
                             }
@@ -1022,6 +1129,12 @@ namespace RoastMyCode
                             string combinedContent = string.Join("\n\n", fileContents);
                             AddChatMessage(combinedContent, "user");
                             _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
+                            
+                            // Show download button if we have files
+                            if (_uploadedFiles.Count > 0)
+                            {
+                                ShowDownloadButton();
+                            }
                         }
                     }
                 }
