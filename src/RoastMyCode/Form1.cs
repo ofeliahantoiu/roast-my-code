@@ -20,6 +20,7 @@ namespace RoastMyCode
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
         private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>(); // Stores file paths and their content
+        private string[] _codeExtensions = Array.Empty<string>(); // Will be initialized in constructor
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
@@ -37,6 +38,9 @@ namespace RoastMyCode
             InitializeComponent();
             _aiService = new AIService(configuration);
             _conversationHistory = new List<ChatMessage>();
+            
+            // Initialize code extensions from language map keys
+            _codeExtensions = _languageMap.Keys.Where(k => k.StartsWith(".")).ToArray();
 
             _conversationHistory.Add(new ChatMessage {
                 Role = "assistant",
@@ -47,6 +51,63 @@ namespace RoastMyCode
             ApplyTheme();
 
             LoadConversationHistory();
+        }
+        
+        private string DetectLanguage(string fileName, string? content = null)
+        {
+            // Check for exact filename matches first (e.g., Makefile, Dockerfile)
+            string fileNameLower = Path.GetFileName(fileName).ToLowerInvariant();
+            if (_languageMap.ContainsKey(fileNameLower))
+            {
+                return _languageMap[fileNameLower];
+            }
+            
+            // Check for directory patterns (e.g., .git/, .vscode/)
+            foreach (var pattern in _languageMap.Keys.Where(k => k.EndsWith("/")))
+            {
+                if (fileName.Replace("\\", "/").Contains(pattern))
+                {
+                    return _languageMap[pattern];
+                }
+            }
+            
+            // Check by file extension
+            string extension = Path.GetExtension(fileName).ToLowerInvariant();
+            if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension))
+            {
+                return _languageMap[extension];
+            }
+            
+            // Try to detect by content for files without extensions
+            if (string.IsNullOrEmpty(extension) && !string.IsNullOrEmpty(content))
+            {
+                // Check for shebang
+                if (content.StartsWith("#!"))
+                {
+                    if (content.Contains("python")) return "Python Script";
+                    if (content.Contains("bash")) return "Bash Script";
+                    if (content.Contains("sh")) return "Shell Script";
+                    if (content.Contains("node")) return "Node.js Script";
+                    if (content.Contains("ruby")) return "Ruby Script";
+                    if (content.Contains("perl")) return "Perl Script";
+                }
+                
+                // Check for XML declaration
+                if (content.TrimStart().StartsWith("<?xml")) return "XML";
+                
+                // Check for JSON
+                if (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("["))
+                {
+                    try
+                    {
+                        _ = System.Text.Json.JsonDocument.Parse(content);
+                        return "JSON";
+                    }
+                    catch { }
+                }
+            }
+            
+            return "Unknown";
         }
 
         private void InitializeModernUI()
@@ -1007,9 +1068,129 @@ namespace RoastMyCode
             }
         }
 
-        private string[] codeExtensions = new[] { ".cs", ".js", ".ts", ".py", ".java", ".cpp", ".c", ".h", 
-            ".hpp", ".php", ".rb", ".go", ".rs", ".swift", ".kt", ".dart", ".sh", ".ps1", 
-            ".bat", ".cmd", ".html", ".css", ".xml", ".json", ".yaml", ".yml", ".md", ".txt" };
+        private readonly Dictionary<string, string> _languageMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Source code files
+            { ".cs", "C#" }, { ".csx", "C# Script" },
+            { ".js", "JavaScript" }, { ".ts", "TypeScript" }, { ".jsx", "JavaScript (React)" }, { ".tsx", "TypeScript (React)" },
+            { ".py", "Python" }, { ".pyw", "Python" },
+            { ".java", "Java" },
+            { ".cpp", "C++" }, { ".h", "C/C++ Header" }, { ".hpp", "C++ Header" }, { ".cxx", "C++" },
+            { ".c", "C" },
+            { ".php", "PHP" },
+            { ".rb", "Ruby" }, { ".rbw", "Ruby" },
+            { ".go", "Go" },
+            { ".rs", "Rust" },
+            { ".swift", "Swift" },
+            { ".kt", "Kotlin" }, { ".kts", "Kotlin Script" },
+            { ".dart", "Dart" },
+            
+            // Script files
+            { ".sh", "Shell Script" },
+            { ".ps1", "PowerShell" }, { ".psm1", "PowerShell Module" },
+            { ".bat", "Batch" }, { ".cmd", "Batch" },
+            
+            // Web files
+            { ".html", "HTML" }, { ".htm", "HTML" },
+            { ".css", "CSS" }, { ".scss", "SCSS" }, { ".sass", "Sass" }, { ".less", "Less" },
+            { ".xml", "XML" },
+            { ".json", "JSON" },
+            { ".yaml", "YAML" }, { ".yml", "YAML" },
+            
+            // Documentation
+            { ".md", "Markdown" }, { ".markdown", "Markdown" },
+            { ".txt", "Plain Text" },
+            
+            // Configuration
+            { ".config", "XML Configuration" },
+            { ".toml", "TOML" },
+            { ".gitignore", "Git Ignore" },
+            { ".dockerignore", "Docker Ignore" },
+            { ".editorconfig", "EditorConfig" },
+            
+            // Build files
+            { ".csproj", "C# Project" },
+            { ".sln", "Visual Studio Solution" },
+            { ".vcxproj", "Visual C++ Project" },
+            { ".fsproj", "F# Project" },
+            { ".vbproj", "Visual Basic Project" },
+            { ".pyproj", "Python Project" },
+            { ".xcodeproj", "Xcode Project" },
+            { ".pro", "Qt Project" },
+            { ".gradle", "Gradle" },
+            { "pom.xml", "Maven" },
+            { "build.gradle", "Gradle" },
+            { "build.sbt", "sbt" },
+            { "CMakeLists.txt", "CMake" },
+            { "Makefile", "Makefile" },
+            { "Dockerfile", "Dockerfile" },
+            { ".gitmodules", "Git Submodules" },
+            { ".gitattributes", "Git Attributes" },
+            { ".npmrc", "npm Configuration" },
+            { ".babelrc", "Babel Configuration" },
+            { ".eslintrc", "ESLint Configuration" },
+            { ".prettierrc", "Prettier Configuration" },
+            { "tsconfig.json", "TypeScript Configuration" },
+            { "webpack.config.js", "Webpack Configuration" },
+            { "package.json", "Node.js Package" },
+            { "package-lock.json", "Node.js Package Lock" },
+            { "yarn.lock", "Yarn Lock" },
+            { "composer.json", "PHP Composer" },
+            { "composer.lock", "PHP Composer Lock" },
+            { "requirements.txt", "Python Requirements" },
+            { "Pipfile", "Pipenv" },
+            { "Pipfile.lock", "Pipenv Lock" },
+            { "poetry.lock", "Poetry Lock" },
+            { "pyproject.toml", "Python Project" },
+            { "setup.py", "Python Setup" },
+            { "setup.cfg", "Python Setup Configuration" },
+            { "MANIFEST.in", "Python Manifest" },
+            { "Cargo.toml", "Rust Cargo" },
+            { "Cargo.lock", "Rust Cargo Lock" },
+            { "go.mod", "Go Module" },
+            { "go.sum", "Go Checksums" },
+            { "Gopkg.toml", "Go Dep" },
+            { "Gopkg.lock", "Go Dep Lock" },
+            { "glide.yaml", "Glide" },
+            { "glide.lock", "Glide Lock" },
+            { "vendor.json", "Govendor" },
+            { "Godeps/Godeps.json", "Godeps" },
+            { "Gemfile", "Ruby Gemfile" },
+            { "Gemfile.lock", "Ruby Gemfile Lock" },
+            { "Rakefile", "Ruby Rake" },
+            { "Podfile", "CocoaPods" },
+            { "Podfile.lock", "CocoaPods Lock" },
+            { "Cartfile", "Carthage" },
+            { "Cartfile.resolved", "Carthage Resolved" },
+            { ".travis.yml", "Travis CI" },
+            { ".gitlab-ci.yml", "GitLab CI" },
+            { ".github/workflows/", "GitHub Actions" },
+            { ".circleci/config.yml", "CircleCI" },
+            { "appveyor.yml", "AppVeyor" },
+            { "azure-pipelines.yml", "Azure Pipelines" },
+            { ".git/", "Git Directory" },
+            { ".svn/", "Subversion Directory" },
+            { ".hg/", "Mercurial Directory" },
+            { ".idea/", "IntelliJ IDEA" },
+            { ".vscode/", "Visual Studio Code" },
+            { ".vs/", "Visual Studio" },
+            { "node_modules/", "Node.js Modules" },
+            { "__pycache__/", "Python Cache" },
+            { ".pytest_cache/", "pytest Cache" },
+            { ".mypy_cache/", "Mypy Cache" },
+            { ".hypothesis/", "Hypothesis" },
+            { ".tox/", "Tox" },
+            { ".venv/", "Python Virtual Environment" },
+            { "venv/", "Python Virtual Environment" },
+            { "env/", "Virtual Environment" },
+            { ".env", "Environment Variables" },
+            { ".env.local", "Local Environment Variables" },
+            { ".env.development", "Development Environment" },
+            { ".env.test", "Test Environment" },
+            { ".env.production", "Production Environment" },
+            { ".env.example", "Environment Example" },
+            { ".env.sample", "Environment Sample" }
+        };
 
         private (string content, string error) ProcessZipFile(string zipPath)
         {
@@ -1019,6 +1200,7 @@ namespace RoastMyCode
                 Directory.CreateDirectory(tempDir);
                 string result = string.Empty;
                 List<string> processedFiles = new List<string>();
+                var fileLanguages = new Dictionary<string, string>();
 
                 try
                 {
@@ -1027,13 +1209,33 @@ namespace RoastMyCode
 
                     // Get all code files in the extracted directory
                     var codeFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
-                        .Where(f => codeExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                        .Where(f => {
+                            string ext = Path.GetExtension(f).ToLowerInvariant();
+                            string fileName = Path.GetFileName(f).ToLowerInvariant();
+                            return _codeExtensions.Contains(ext) || _languageMap.ContainsKey(fileName);
+                        })
                         .OrderBy(f => f)
                         .ToList();
 
                     if (codeFiles.Count == 0)
                     {
                         return ($"No code files found in {Path.GetFileName(zipPath)}", string.Empty);
+                    }
+
+                    // First pass: detect languages for all files
+                    foreach (string file in codeFiles)
+                    {
+                        try
+                        {
+                            string content = File.ReadAllText(file);
+                            string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                            string language = DetectLanguage(relativePath, content);
+                            fileLanguages[relativePath] = language;
+                            
+                            // Store file content for later use
+                            _uploadedFiles[relativePath] = content;
+                        }
+                        catch { /* Ignore files we can't read */ }
                     }
 
                     // Try to identify main entry points
@@ -1047,13 +1249,16 @@ namespace RoastMyCode
                     // Process main files first, then others
                     var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
 
+                    // Second pass: generate output with language information
                     foreach (string file in filesToProcess)
                     {
                         try
                         {
                             string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                            string content = File.ReadAllText(file);
-                            result += $"=== {relativePath} ===\n{content}\n\n";
+                            string language = fileLanguages.ContainsKey(relativePath) ? fileLanguages[relativePath] : "Unknown";
+                            string content = _uploadedFiles[relativePath];
+                            
+                            result += $"=== {relativePath} ({language}) ===\n{content}\n\n";
                             processedFiles.Add(relativePath);
                         }
                         catch (Exception ex)
@@ -1113,9 +1318,10 @@ namespace RoastMyCode
                                 else
                                 {
                                     string content = File.ReadAllText(fileName);
-                                    string displayName = Path.GetFileName(fileName);
-                                    _uploadedFiles[displayName] = content; // Store file content with its name as key
-                                    fileContents.Add($"=== {displayName} ===\n{content}");
+                                string displayName = Path.GetFileName(fileName);
+                                string language = DetectLanguage(fileName, content);
+                                _uploadedFiles[displayName] = content; // Store file content with its name as key
+                                fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                 }
                             }
                             catch (Exception ex)
