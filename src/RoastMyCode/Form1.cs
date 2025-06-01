@@ -8,19 +8,67 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Diagnostics;
 using RoastMyCode.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RoastMyCode
 {
     public partial class Form1 : Form
     {
-        private readonly AIService _aiService;
-        private List<ChatMessage> _conversationHistory;
+        private readonly IConfiguration _configuration;
+        private readonly IAIService _aiService;
+        private readonly List<ChatMessage> _conversationHistory;
+        private readonly FileUploadOptions _fileUploadOptions;
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
         private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>(); // Stores file paths and their content
         private string[] _codeExtensions = Array.Empty<string>(); // Will be initialized in constructor
+        private long _currentTotalSizeBytes = 0; // Track total size of uploaded files
+        
+        // Map of file extensions and special filenames to their display names
+        private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // File extensions
+            [".cs"] = "C#",
+            [".js"] = "JavaScript",
+            [".ts"] = "TypeScript",
+            [".py"] = "Python",
+            [".java"] = "Java",
+            [".cpp"] = "C++",
+            [".c"] = "C",
+            [".h"] = "C/C++ Header",
+            [".hpp"] = "C++ Header",
+            [".php"] = "PHP",
+            [".rb"] = "Ruby",
+            [".go"] = "Go",
+            [".rs"] = "Rust",
+            [".swift"] = "Swift",
+            [".kt"] = "Kotlin",
+            [".dart"] = "Dart",
+            [".sh"] = "Shell Script",
+            [".ps1"] = "PowerShell",
+            [".bat"] = "Batch",
+            [".cmd"] = "Command Script",
+            [".html"] = "HTML",
+            [".css"] = "CSS",
+            [".xml"] = "XML",
+            [".json"] = "JSON",
+            [".yaml"] = "YAML",
+            [".yml"] = "YAML",
+            [".md"] = "Markdown",
+            [".txt"] = "Text",
+            
+            // Special filenames
+            ["dockerfile"] = "Dockerfile",
+            [".dockerignore"] = "Docker Ignore",
+            [".gitignore"] = "Git Ignore",
+            ["makefile"] = "Makefile",
+            ["readme"] = "Readme",
+            ["license"] = "License"
+        };
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
@@ -33,24 +81,59 @@ namespace RoastMyCode
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
 
-        public Form1(IConfiguration configuration)
+        public Form1(IConfiguration configuration, IServiceProvider serviceProvider)
         {
-            InitializeComponent();
-            _aiService = new AIService(configuration);
-            _conversationHistory = new List<ChatMessage>();
-            
-            // Initialize code extensions from language map keys
-            _codeExtensions = _languageMap.Keys.Where(k => k.StartsWith(".")).ToArray();
+            try
+            {
+                if (configuration == null)
+                    throw new ArgumentNullException(nameof(configuration));
+                if (serviceProvider == null)
+                    throw new ArgumentNullException(nameof(serviceProvider));
 
-            _conversationHistory.Add(new ChatMessage {
-                Role = "assistant",
-                Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
-            });
+                _configuration = configuration;
+                _aiService = new AIService(_configuration);
+                _conversationHistory = new List<ChatMessage>();
+                
+                // Get FileUploadOptions from service provider
+                _fileUploadOptions = serviceProvider.GetService<FileUploadOptions>() ?? 
+                    throw new InvalidOperationException("Failed to resolve FileUploadOptions from service provider");
+                
+                // Ensure required properties are set
+                if (_fileUploadOptions.AllowedExtensions == null || _fileUploadOptions.AllowedExtensions.Length == 0)
+                {
+                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py" }; // Default extensions
+                }
+                
+                if (_fileUploadOptions.MaxFileSizeMB <= 0)
+                {
+                    _fileUploadOptions.MaxFileSizeMB = 10; // Default 10MB
+                }
+                
+                if (_fileUploadOptions.MaxTotalSizeMB <= 0)
+                {
+                    _fileUploadOptions.MaxTotalSizeMB = 50; // Default 50MB
+                }
+                
+                // Initialize code extensions from language map keys
+                _codeExtensions = _languageMap.Keys.Where(k => k.StartsWith(".")).ToArray();
 
-            InitializeModernUI();
-            ApplyTheme();
+                _conversationHistory.Add(new ChatMessage {
+                    Role = "assistant",
+                    Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
+                });
 
-            LoadConversationHistory();
+                InitializeComponent(); // Make sure this is called first
+                InitializeModernUI();
+                ApplyTheme();
+
+                LoadConversationHistory();
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = $"Error initializing Form1: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+                MessageBox.Show(errorMessage, "Initialization Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw; // Re-throw to ensure the application doesn't continue in a bad state
+            }
         }
         
         private string DetectLanguage(string fileName, string? content = null)
@@ -991,8 +1074,7 @@ namespace RoastMyCode
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 FlatAppearance = { BorderSize = 0 },
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point),
                 Padding = new Padding(15, 5, 15, 5),
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
@@ -1012,7 +1094,30 @@ namespace RoastMyCode
             this.Controls.Add(downloadButton);
             downloadButton.BringToFront();
         }
+        
+        private void HideDownloadButton()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(HideDownloadButton));
+                return;
+            }
 
+            var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
+            if (downloadButton != null)
+            {
+                this.Controls.Remove(downloadButton);
+                downloadButton.Dispose();
+            }
+        }
+
+        private void ResetUploads()
+        {
+            _uploadedFiles.Clear();
+            _currentTotalSizeBytes = 0;
+            HideDownloadButton();
+        }
+        
         private void DownloadCodeBundle()
         {
             if (_uploadedFiles.Count == 0)
@@ -1068,218 +1173,251 @@ namespace RoastMyCode
             }
         }
 
-        private readonly Dictionary<string, string> _languageMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            // Source code files
-            { ".cs", "C#" }, { ".csx", "C# Script" },
-            { ".js", "JavaScript" }, { ".ts", "TypeScript" }, { ".jsx", "JavaScript (React)" }, { ".tsx", "TypeScript (React)" },
-            { ".py", "Python" }, { ".pyw", "Python" },
-            { ".java", "Java" },
-            { ".cpp", "C++" }, { ".h", "C/C++ Header" }, { ".hpp", "C++ Header" }, { ".cxx", "C++" },
-            { ".c", "C" },
-            { ".php", "PHP" },
-            { ".rb", "Ruby" }, { ".rbw", "Ruby" },
-            { ".go", "Go" },
-            { ".rs", "Rust" },
-            { ".swift", "Swift" },
-            { ".kt", "Kotlin" }, { ".kts", "Kotlin Script" },
-            { ".dart", "Dart" },
-            
-            // Script files
-            { ".sh", "Shell Script" },
-            { ".ps1", "PowerShell" }, { ".psm1", "PowerShell Module" },
-            { ".bat", "Batch" }, { ".cmd", "Batch" },
-            
-            // Web files
-            { ".html", "HTML" }, { ".htm", "HTML" },
-            { ".css", "CSS" }, { ".scss", "SCSS" }, { ".sass", "Sass" }, { ".less", "Less" },
-            { ".xml", "XML" },
-            { ".json", "JSON" },
-            { ".yaml", "YAML" }, { ".yml", "YAML" },
-            
-            // Documentation
-            { ".md", "Markdown" }, { ".markdown", "Markdown" },
-            { ".txt", "Plain Text" },
-            
-            // Configuration
-            { ".config", "XML Configuration" },
-            { ".toml", "TOML" },
-            { ".gitignore", "Git Ignore" },
-            { ".dockerignore", "Docker Ignore" },
-            { ".editorconfig", "EditorConfig" },
-            
-            // Build files
-            { ".csproj", "C# Project" },
-            { ".sln", "Visual Studio Solution" },
-            { ".vcxproj", "Visual C++ Project" },
-            { ".fsproj", "F# Project" },
-            { ".vbproj", "Visual Basic Project" },
-            { ".pyproj", "Python Project" },
-            { ".xcodeproj", "Xcode Project" },
-            { ".pro", "Qt Project" },
-            { ".gradle", "Gradle" },
-            { "pom.xml", "Maven" },
-            { "build.gradle", "Gradle" },
-            { "build.sbt", "sbt" },
-            { "CMakeLists.txt", "CMake" },
-            { "Makefile", "Makefile" },
-            { "Dockerfile", "Dockerfile" },
-            { ".gitmodules", "Git Submodules" },
-            { ".gitattributes", "Git Attributes" },
-            { ".npmrc", "npm Configuration" },
-            { ".babelrc", "Babel Configuration" },
-            { ".eslintrc", "ESLint Configuration" },
-            { ".prettierrc", "Prettier Configuration" },
-            { "tsconfig.json", "TypeScript Configuration" },
-            { "webpack.config.js", "Webpack Configuration" },
-            { "package.json", "Node.js Package" },
-            { "package-lock.json", "Node.js Package Lock" },
-            { "yarn.lock", "Yarn Lock" },
-            { "composer.json", "PHP Composer" },
-            { "composer.lock", "PHP Composer Lock" },
-            { "requirements.txt", "Python Requirements" },
-            { "Pipfile", "Pipenv" },
-            { "Pipfile.lock", "Pipenv Lock" },
-            { "poetry.lock", "Poetry Lock" },
-            { "pyproject.toml", "Python Project" },
-            { "setup.py", "Python Setup" },
-            { "setup.cfg", "Python Setup Configuration" },
-            { "MANIFEST.in", "Python Manifest" },
-            { "Cargo.toml", "Rust Cargo" },
-            { "Cargo.lock", "Rust Cargo Lock" },
-            { "go.mod", "Go Module" },
-            { "go.sum", "Go Checksums" },
-            { "Gopkg.toml", "Go Dep" },
-            { "Gopkg.lock", "Go Dep Lock" },
-            { "glide.yaml", "Glide" },
-            { "glide.lock", "Glide Lock" },
-            { "vendor.json", "Govendor" },
-            { "Godeps/Godeps.json", "Godeps" },
-            { "Gemfile", "Ruby Gemfile" },
-            { "Gemfile.lock", "Ruby Gemfile Lock" },
-            { "Rakefile", "Ruby Rake" },
-            { "Podfile", "CocoaPods" },
-            { "Podfile.lock", "CocoaPods Lock" },
-            { "Cartfile", "Carthage" },
-            { "Cartfile.resolved", "Carthage Resolved" },
-            { ".travis.yml", "Travis CI" },
-            { ".gitlab-ci.yml", "GitLab CI" },
-            { ".github/workflows/", "GitHub Actions" },
-            { ".circleci/config.yml", "CircleCI" },
-            { "appveyor.yml", "AppVeyor" },
-            { "azure-pipelines.yml", "Azure Pipelines" },
-            { ".git/", "Git Directory" },
-            { ".svn/", "Subversion Directory" },
-            { ".hg/", "Mercurial Directory" },
-            { ".idea/", "IntelliJ IDEA" },
-            { ".vscode/", "Visual Studio Code" },
-            { ".vs/", "Visual Studio" },
-            { "node_modules/", "Node.js Modules" },
-            { "__pycache__/", "Python Cache" },
-            { ".pytest_cache/", "pytest Cache" },
-            { ".mypy_cache/", "Mypy Cache" },
-            { ".hypothesis/", "Hypothesis" },
-            { ".tox/", "Tox" },
-            { ".venv/", "Python Virtual Environment" },
-            { "venv/", "Python Virtual Environment" },
-            { "env/", "Virtual Environment" },
-            { ".env", "Environment Variables" },
-            { ".env.local", "Local Environment Variables" },
-            { ".env.development", "Development Environment" },
-            { ".env.test", "Test Environment" },
-            { ".env.production", "Production Environment" },
-            { ".env.example", "Environment Example" },
-            { ".env.sample", "Environment Sample" }
-        };
-
         private (string content, string error) ProcessZipFile(string zipPath)
         {
+            string tempDir = string.Empty;
+            string result = string.Empty;
+            var processedFiles = new List<string>();
+            var fileLanguages = new Dictionary<string, string>();
+            var zipFileInfo = new FileInfo(zipPath);
+            
+            // Check if ZIP file itself is within size limits
+            if (zipFileInfo.Length > _fileUploadOptions.MaxFileSizeBytes)
+            {
+                return (string.Empty, $"ZIP file '{Path.GetFileName(zipPath)}' exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB");
+            }
+
+            // Calculate remaining space for extraction
+            long remainingSpace = _fileUploadOptions.MaxTotalSizeBytes - _currentTotalSizeBytes;
+            if (zipFileInfo.Length > remainingSpace)
+            {
+                return (string.Empty, $"Extracting this ZIP would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB");
+            }
+
             try
             {
-                string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                 Directory.CreateDirectory(tempDir);
-                string result = string.Empty;
-                List<string> processedFiles = new List<string>();
-                var fileLanguages = new Dictionary<string, string>();
-
-                try
+                
+                // Extract all files
+                using (var archive = ZipFile.OpenRead(zipPath))
                 {
-                    // Extract all files
-                    ZipFile.ExtractToDirectory(zipPath, tempDir);
-
-                    // Get all code files in the extracted directory
-                    var codeFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
-                        .Where(f => {
-                            string ext = Path.GetExtension(f).ToLowerInvariant();
-                            string fileName = Path.GetFileName(f).ToLowerInvariant();
-                            return _codeExtensions.Contains(ext) || _languageMap.ContainsKey(fileName);
-                        })
-                        .OrderBy(f => f)
-                        .ToList();
-
-                    if (codeFiles.Count == 0)
+                    // First pass: validate all files in the ZIP
+                    foreach (var entry in archive.Entries)
                     {
-                        return ($"No code files found in {Path.GetFileName(zipPath)}", string.Empty);
-                    }
-
-                    // First pass: detect languages for all files
-                    foreach (string file in codeFiles)
-                    {
-                        try
+                        if (!entry.FullName.EndsWith("/")) // Skip directories
                         {
-                            string content = File.ReadAllText(file);
-                            string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                            string language = DetectLanguage(relativePath, content);
-                            fileLanguages[relativePath] = language;
+                            string fileName = Path.GetFileName(entry.FullName);
+                            if (string.IsNullOrEmpty(fileName)) continue;
                             
-                            // Store file content for later use
-                            _uploadedFiles[relativePath] = content;
+                            // Check file type
+                            string ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                            if (!_fileUploadOptions.AllowedExtensions.Contains(ext) && !_languageMap.ContainsKey(fileName.ToLowerInvariant()))
+                            {
+                                return (string.Empty, $"ZIP contains disallowed file type: {entry.Name}");
+                            }
+                            
+                            // Check individual file size
+                            if (entry.Length > _fileUploadOptions.MaxFileSizeBytes)
+                            {
+                                return (string.Empty, $"ZIP contains file '{entry.Name}' that exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB");
+                            }
+                            
+                            // Check total extracted size
+                            if (entry.Length > remainingSpace)
+                            {
+                                return (string.Empty, $"Extracting this ZIP would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB");
+                            }
+                            
+                            remainingSpace -= entry.Length;
                         }
-                        catch { /* Ignore files we can't read */ }
                     }
-
-                    // Try to identify main entry points
-                    var possibleMains = codeFiles.Where(f => 
-                        f.IndexOf("program", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        f.IndexOf("main", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        f.IndexOf("app", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        f.IndexOf("index", StringComparison.OrdinalIgnoreCase) >= 0)
-                        .ToList();
-
-                    // Process main files first, then others
-                    var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
-
-                    // Second pass: generate output with language information
-                    foreach (string file in filesToProcess)
+                    
+                    // Second pass: extract and process files
+                    foreach (var entry in archive.Entries)
                     {
-                        try
+                        if (entry.FullName.EndsWith("/")) continue; // Skip directories
+                        
+                        string entryPath = Path.Combine(tempDir, entry.FullName);
+                        string? directoryPath = Path.GetDirectoryName(entryPath);
+                        
+                        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
                         {
-                            string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                            string language = fileLanguages.ContainsKey(relativePath) ? fileLanguages[relativePath] : "Unknown";
-                            string content = _uploadedFiles[relativePath];
-                            
+                            Directory.CreateDirectory(directoryPath);
+                        }
+                        
+                        entry.ExtractToFile(entryPath, true);
+                    }
+                }
+
+                // Get all code files in the extracted directory
+                var codeFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
+                    .Where(f => {
+                        string ext = Path.GetExtension(f).ToLowerInvariant();
+                        string fileName = Path.GetFileName(f).ToLowerInvariant();
+                        return _fileUploadOptions.AllowedExtensions.Contains(ext) || _languageMap.ContainsKey(fileName);
+                    })
+                    .OrderBy(f => f)
+                    .ToList();
+
+                if (codeFiles.Count == 0)
+                {
+                    return ($"No supported code files found in {Path.GetFileName(zipPath)}", string.Empty);
+                }
+
+                // First pass: detect languages for all files and update total size
+                foreach (string file in codeFiles)
+                {
+                    try
+                    {
+                        string content = File.ReadAllText(file);
+                        string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                        string language = DetectLanguage(relativePath, content);
+                        fileLanguages[relativePath] = language;
+                        
+                        // Store file content for later use
+                        _uploadedFiles[relativePath] = content;
+                        _currentTotalSizeBytes += new FileInfo(file).Length;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but continue with other files
+                        Debug.WriteLine($"Error processing {file}: {ex.Message}");
+                    }
+                }
+
+                // Try to identify main entry points
+                var possibleMains = codeFiles.Where(f => 
+                    f.IndexOf("program", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    f.IndexOf("main", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    f.IndexOf("app", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    f.IndexOf("index", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToList();
+
+                // Process main files first, then others
+                var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
+
+                // Second pass: generate output with language information
+                foreach (string file in filesToProcess)
+                {
+                    try
+                    {
+                        string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                        if (fileLanguages.TryGetValue(relativePath, out string? language) && 
+                            _uploadedFiles.TryGetValue(relativePath, out string? content))
+                        {
                             result += $"=== {relativePath} ({language}) ===\n{content}\n\n";
                             processedFiles.Add(relativePath);
                         }
-                        catch (Exception ex)
-                        {
-                            result += $"Error reading {Path.GetFileName(file)}: {ex.Message}\n\n";
-                        }
                     }
+                    catch (Exception ex)
+                    {
+                        result += $"Error reading {Path.GetFileName(file)}: {ex.Message}\n\n";
+                    }
+                }
 
-                    return (result, string.Empty);
-                }
-                finally
+                
+                if (processedFiles.Count == 0)
                 {
-                    // Clean up extracted files
-                    try { Directory.Delete(tempDir, true); }
-                    catch { /* Ignore cleanup errors */ }
+                    return (string.Empty, "No valid code files could be extracted from the ZIP");
                 }
+                
+                return (result, string.Empty);
             }
             catch (Exception ex)
             {
+                // If we encounter an error, clean up any files we might have added
+                foreach (var file in processedFiles)
+                {
+                    _uploadedFiles.Remove(file);
+                }
+                _currentTotalSizeBytes -= processedFiles.Sum(f => new FileInfo(Path.Combine(tempDir, f)).Length);
+                
                 return (string.Empty, $"Error processing ZIP file: {ex.Message}");
             }
+            finally
+            {
+                // Clean up extracted files
+                try 
+                { 
+                    if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error cleaning up temp directory: {ex.Message}");
+                }
+            }
+        }
+
+        private bool IsFileTypeAllowed(string fileName)
+        {
+            string extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return _fileUploadOptions.AllowedExtensions.Contains(extension) || 
+                   _languageMap.ContainsKey(Path.GetFileName(fileName).ToLowerInvariant());
+        }
+
+        private bool IsFileSizeWithinLimit(string filePath, out string error)
+        {
+            error = string.Empty;
+            var fileInfo = new FileInfo(filePath);
+            
+            if (fileInfo.Length > _fileUploadOptions.MaxFileSizeBytes)
+            {
+                error = $"File '{Path.GetFileName(filePath)}' exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB";
+                return false;
+            }
+
+            if (_currentTotalSizeBytes + fileInfo.Length > _fileUploadOptions.MaxTotalSizeBytes)
+            {
+                error = $"Adding this file would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateFiles(IEnumerable<string> filePaths, out List<string> validFiles, out List<string> errors)
+        {
+            validFiles = new List<string>();
+            errors = new List<string>();
+            long totalSize = 0;
+
+            foreach (var filePath in filePaths)
+            {
+                try
+                {
+                    if (!IsFileTypeAllowed(filePath))
+                    {
+                        errors.Add($"File type not allowed: {Path.GetFileName(filePath)}");
+                        continue;
+                    }
+
+                    if (!IsFileSizeWithinLimit(filePath, out string sizeError))
+                    {
+                        errors.Add(sizeError);
+                        continue;
+                    }
+
+                    var fileInfo = new FileInfo(filePath);
+                    totalSize += fileInfo.Length;
+                    validFiles.Add(filePath);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Error processing {Path.GetFileName(filePath)}: {ex.Message}");
+                }
+            }
+
+            // Update the total size if all files are valid
+            if (errors.Count == 0)
+            {
+                _currentTotalSizeBytes += totalSize;
+            }
+
+            return errors.Count == 0;
         }
 
         private void PbCameraIcon_Click(object? sender, EventArgs e)
@@ -1289,17 +1427,49 @@ namespace RoastMyCode
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Multiselect = true;
-                    openFileDialog.Filter = "Code Files|*.cs;*.js;*.ts;*.py;*.java;*.cpp;*.c;*.h;*.hpp;*.php;*.rb;*.go;*.rs;*.swift;*.kt;*.dart;*.sh;*.ps1;*.bat;*.cmd;*.html;*.css;*.xml;*.json;*.yaml;*.yml;*.md;*.txt|ZIP Archives|*.zip|All Files|*.*";
-                    openFileDialog.Title = "Select Code Files or ZIP Archives to Upload";
+                    // Build filter string from allowed extensions
+                    string filter = "Supported Files|*" + string.Join(";*", _fileUploadOptions.AllowedExtensions) + 
+                                 "|ZIP Archives|*.zip|All Files|*.*";
+                    openFileDialog.Filter = filter;
+                    openFileDialog.Title = $"Select Files to Upload (Max {_fileUploadOptions.MaxFileSizeMB}MB per file, {_fileUploadOptions.MaxTotalSizeMB}MB total)";
                     openFileDialog.CheckFileExists = true;
                     openFileDialog.CheckPathExists = true;
 
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
                         List<string> fileContents = new List<string>();
-                        _uploadedFiles.Clear(); // Clear previous uploads when starting a new one
+                        var filesToProcess = new List<string>(openFileDialog.FileNames);
                         
-                        foreach (string fileName in openFileDialog.FileNames)
+                        // Validate files before processing
+                        if (!ValidateFiles(filesToProcess, out var validFiles, out var validationErrors))
+                        {
+                            // Show validation errors to user
+                            foreach (var error in validationErrors.Take(5)) // Limit to first 5 errors to avoid flooding
+                            {
+                                AddChatMessage(error, "system");
+                            }
+                            
+                            if (validationErrors.Count > 5)
+                            {
+                                AddChatMessage($"... and {validationErrors.Count - 5} more files had issues", "system");
+                            }
+                            
+                            // If no files are valid, don't clear previous uploads
+                            if (validFiles.Count == 0)
+                            {
+                                return;
+                            }
+                            
+                            filesToProcess = validFiles;
+                        }
+                        else
+                        {
+                            // If all files are valid, clear previous uploads
+                            ResetUploads();
+                        }
+                        
+                        // Process each valid file
+                        foreach (string fileName in filesToProcess)
                         {
                             try 
                             {
@@ -1318,8 +1488,15 @@ namespace RoastMyCode
                                 else
                                 {
                                     string content = File.ReadAllText(fileName);
-                                string displayName = Path.GetFileName(fileName);
-                                string language = DetectLanguage(fileName, content);
+                                    string displayName = Path.GetFileName(fileName);
+                                    string language = DetectLanguage(fileName, content);
+                                    
+                                    // Only add to uploaded files if not already processed by ZIP
+                                    if (!_uploadedFiles.ContainsKey(displayName))
+                                    {
+                                        _uploadedFiles[displayName] = content;
+                                        fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
+                                    }
                                 _uploadedFiles[displayName] = content; // Store file content with its name as key
                                 fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                 }
@@ -1368,12 +1545,6 @@ namespace RoastMyCode
                 PositionChatBubbles();
             }
         }
-    }
-
-    public class ChatMessage
-    {
-        public string Role { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
     }
 
     public class RoundedRichTextBox : RichTextBox

@@ -7,10 +7,11 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Windows.Forms;
+using RoastMyCode.Services;
 
 namespace RoastMyCode.Services
 {
-    public class AIService
+    public class AIService : IAIService
     {
         private readonly HttpClient _httpClient;
         private readonly string _apiKey;
