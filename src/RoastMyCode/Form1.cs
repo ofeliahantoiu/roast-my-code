@@ -451,6 +451,7 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+            pbCameraIcon.Click += PbCameraIcon_Click;
 
             pbMicIcon = new PictureBox
             {
@@ -897,6 +898,50 @@ namespace RoastMyCode
         private void UpdateThemeIcon()
         {
             LoadImageFromAssets(pbThemeToggle, _isDarkMode ? "brightness.png" : "moon.png");
+        }
+
+        private void PbCameraIcon_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
+                {
+                    openFileDialog.Multiselect = true;
+                    openFileDialog.Filter = "Code Files|*.cs;*.js;*.ts;*.py;*.java;*.cpp;*.c;*.h;*.hpp;*.php;*.rb;*.go;*.rs;*.swift;*.kt;*.dart;*.sh;*.ps1;*.bat;*.cmd;*.html;*.css;*.xml;*.json;*.yaml;*.yml;*.md;*.txt|All Files|*.*";
+                    openFileDialog.Title = "Select Code Files to Upload";
+                    openFileDialog.CheckFileExists = true;
+                    openFileDialog.CheckPathExists = true;
+
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        List<string> fileContents = new List<string>();
+                        foreach (string fileName in openFileDialog.FileNames)
+                        {
+                            try 
+                            {
+                                string content = File.ReadAllText(fileName);
+                                string displayName = Path.GetFileName(fileName);
+                                fileContents.Add($"=== {displayName} ===\n{content}");
+                            }
+                            catch (Exception ex)
+                            {
+                                fileContents.Add($"Error reading {Path.GetFileName(fileName)}: {ex.Message}");
+                            }
+                        }
+
+                        if (fileContents.Count > 0)
+                        {
+                            string combinedContent = string.Join("\n\n", fileContents);
+                            AddChatMessage(combinedContent, "user");
+                            _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AddChatMessage($"Error during file upload: {ex.Message}", "system");
+            }
         }
 
         private void PositionChatAreaPanel()
