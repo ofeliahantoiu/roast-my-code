@@ -24,11 +24,9 @@ namespace RoastMyCode
         private readonly FileUploadOptions _fileUploadOptions;
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
-        private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>(); // Stores file paths and their content
-        private string[] _codeExtensions = Array.Empty<string>(); // Will be initialized in constructor
-        private long _currentTotalSizeBytes = 0; // Track total size of uploaded files
-        
-        // Map of file extensions and special filenames to their display names
+        private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>();   
+        private string[] _codeExtensions = Array.Empty<string>(); 
+        private long _currentTotalSizeBytes = 0; 
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
@@ -61,7 +59,6 @@ namespace RoastMyCode
             [".md"] = "Markdown",
             [".txt"] = "Text",
             
-            // Special filenames
             ["dockerfile"] = "Dockerfile",
             [".dockerignore"] = "Docker Ignore",
             [".gitignore"] = "Git Ignore",
@@ -76,10 +73,13 @@ namespace RoastMyCode
         private ComboBox cmbRoastLevel = null!;
         private Panel titleLogoPanel = null!;
         private RichTextBox rtInput = null!;
-        private PictureBox pbCameraIcon = null!;
-        private PictureBox pbMicIcon = null!;
+        private PictureBox? pbCameraIcon;
+        private PictureBox? pbMicIcon;
+        private PictureBox? pbUploadIcon = null!;
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
+        private Panel inputPanel = null!;
+
 
         public Form1(IConfiguration configuration, IServiceProvider serviceProvider)
         {
@@ -94,27 +94,24 @@ namespace RoastMyCode
                 _aiService = new AIService(_configuration);
                 _conversationHistory = new List<ChatMessage>();
                 
-                // Get FileUploadOptions from service provider
                 _fileUploadOptions = serviceProvider.GetService<FileUploadOptions>() ?? 
                     throw new InvalidOperationException("Failed to resolve FileUploadOptions from service provider");
                 
-                // Ensure required properties are set
                 if (_fileUploadOptions.AllowedExtensions == null || _fileUploadOptions.AllowedExtensions.Length == 0)
                 {
-                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py" }; // Default extensions
+                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py" }; 
                 }
                 
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
                 {
-                    _fileUploadOptions.MaxFileSizeMB = 10; // Default 10MB
+                    _fileUploadOptions.MaxFileSizeMB = 10; 
                 }
                 
                 if (_fileUploadOptions.MaxTotalSizeMB <= 0)
                 {
-                    _fileUploadOptions.MaxTotalSizeMB = 50; // Default 50MB
+                    _fileUploadOptions.MaxTotalSizeMB = 50;
                 }
                 
-                // Initialize code extensions from language map keys
                 _codeExtensions = _languageMap.Keys.Where(k => k.StartsWith(".")).ToArray();
 
                 _conversationHistory.Add(new ChatMessage {
@@ -122,7 +119,7 @@ namespace RoastMyCode
                     Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
                 });
 
-                InitializeComponent(); // Make sure this is called first
+                InitializeComponent(); 
                 InitializeModernUI();
                 ApplyTheme();
 
@@ -132,20 +129,18 @@ namespace RoastMyCode
             {
                 string errorMessage = $"Error initializing Form1: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
                 MessageBox.Show(errorMessage, "Initialization Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                throw; // Re-throw to ensure the application doesn't continue in a bad state
+                throw; 
             }
         }
         
         private string DetectLanguage(string fileName, string? content = null)
         {
-            // Check for exact filename matches first (e.g., Makefile, Dockerfile)
             string fileNameLower = Path.GetFileName(fileName).ToLowerInvariant();
             if (_languageMap.ContainsKey(fileNameLower))
             {
                 return _languageMap[fileNameLower];
             }
             
-            // Check for directory patterns (e.g., .git/, .vscode/)
             foreach (var pattern in _languageMap.Keys.Where(k => k.EndsWith("/")))
             {
                 if (fileName.Replace("\\", "/").Contains(pattern))
@@ -154,17 +149,14 @@ namespace RoastMyCode
                 }
             }
             
-            // Check by file extension
             string extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension))
             {
                 return _languageMap[extension];
             }
             
-            // Try to detect by content for files without extensions
             if (string.IsNullOrEmpty(extension) && !string.IsNullOrEmpty(content))
             {
-                // Check for shebang
                 if (content.StartsWith("#!"))
                 {
                     if (content.Contains("python")) return "Python Script";
@@ -175,10 +167,8 @@ namespace RoastMyCode
                     if (content.Contains("perl")) return "Perl Script";
                 }
                 
-                // Check for XML declaration
                 if (content.TrimStart().StartsWith("<?xml")) return "XML";
                 
-                // Check for JSON
                 if (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("["))
                 {
                     try
@@ -204,24 +194,56 @@ namespace RoastMyCode
 
             this.Controls.Clear();
 
-            // Add gradient background
             pbGradientBackground = new PictureBox
             {
-                Dock = DockStyle.Bottom,
-                Height = this.ClientSize.Height / 2,
+                Size = new Size(this.ClientSize.Width, this.ClientSize.Height / 2),
+                Location = new Point(0, this.ClientSize.Height / 2),
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 BackColor = Color.Transparent
             };
+
             LoadImageFromAssets(pbGradientBackground, "gradient.png");
             this.Controls.Add(pbGradientBackground);
             pbGradientBackground.SendToBack();
 
-            Panel topPanel = new Panel
+            chatAreaPanel = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 200,
-                BackColor = Color.FromArgb(45, 45, 45),
-                Padding = new Padding(10, 20, 10, 10)
+                Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 200 - 120),
+                Location = new Point(0, 200),
+                AutoScroll = true,
+                Padding = new Padding(20),
+                BackColor = Color.Transparent
+            };
+            this.Controls.Add(chatAreaPanel);   
+
+            topPanel = new Panel
+            {
+                Size = new Size(this.ClientSize.Width, 200),
+                Location = new Point(0, 0),
+                BackColor = Color.Transparent
+            };
+            this.Controls.Add(topPanel);
+
+            bottomPanel = new Panel
+            {
+                Size = new Size(this.ClientSize.Width, 120),
+                Location = new Point(0, this.ClientSize.Height - 120),
+                BackColor = Color.Transparent
+            };
+            this.Controls.Add(bottomPanel);
+
+            this.Resize += (s, e) =>
+            {
+                pbGradientBackground.Size = new Size(this.ClientSize.Width, this.ClientSize.Height / 2);
+                pbGradientBackground.Location = new Point(0, this.ClientSize.Height / 2);
+
+                topPanel.Size = new Size(this.ClientSize.Width, 200);
+
+                chatAreaPanel.Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 200 - 120);
+                chatAreaPanel.Location = new Point(0, 200);
+
+                bottomPanel.Size = new Size(this.ClientSize.Width, 120);
+                bottomPanel.Location = new Point(0, this.ClientSize.Height - 120);
             };
 
             titleLogoPanel = new Panel
@@ -245,7 +267,7 @@ namespace RoastMyCode
             lblTitle = new Label
             {
                 Text = "Roast My Code",
-                Font = new Font("Segoe UI", 14, FontStyle.Regular), // Changed font size to 14
+                Font = new Font("Segoe UI", 14, FontStyle.Regular),
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize = true,
@@ -503,55 +525,20 @@ namespace RoastMyCode
             };
             leftControlsPanel.Controls.Add(cmbRoastLevel);
 
-            Panel bottomPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 70,
-                BackColor = Color.FromArgb(55, 55, 55),
-                Padding = new Padding(20)
-            };
-
-            chatAreaPanel = new Panel
-            {
-                AutoScroll = true,
-                BackColor = Color.FromArgb(45, 45, 45),
-                Padding = new Padding(10),
-                AutoScrollMinSize = new Size(0, 0)
-            };
-            chatAreaPanel.Scroll += ChatAreaPanel_Scroll;
-
-            this.Controls.Add(topPanel);
-            this.Controls.Add(bottomPanel);
-            this.Controls.Add(chatAreaPanel); 
-
-            topPanel.BringToFront();
-
-            PositionChatAreaPanel();
-
-            this.Resize += Form1_Resize;
-
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;
-            Panel inputPanel = new Panel
+            inputPanel = new Panel
             {
                 Width = inputPanelWidth,
                 Height = inputPanelHeight,
                 BackColor = Color.FromArgb(70, 70, 70),
-                Dock = DockStyle.None,
-                Margin = new Padding(0)
+                Location = new Point((bottomPanel.Width - inputPanelWidth) / 2, (bottomPanel.Height - inputPanelHeight) / 2)
             };
             bottomPanel.Controls.Add(inputPanel);
 
-            inputPanel.Location = new Point(
-                (bottomPanel.ClientSize.Width - inputPanelWidth) / 2,
-                (bottomPanel.ClientSize.Height - inputPanelHeight) / 2
-            );
-
-            this.Resize += (s, e) => {
-                inputPanel.Location = new Point(
-                    (bottomPanel.ClientSize.Width - inputPanelWidth) / 2,
-                    (bottomPanel.ClientSize.Height - inputPanelHeight) / 2
-                );
+            bottomPanel.Resize += (s, e) =>
+            {
+                inputPanel.Location = new Point((bottomPanel.Width - inputPanel.Width) / 2, (bottomPanel.Height - inputPanel.Height) / 2);
             };
 
             Panel sendButtonPanel = new Panel
@@ -579,7 +566,7 @@ namespace RoastMyCode
 
             Panel leftIconsPanel = new Panel
             {
-                Width = 60, 
+                Width = 100, 
                 Height = inputPanelHeight,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0),
@@ -587,18 +574,30 @@ namespace RoastMyCode
                 Location = new Point(0, 0)
             };
 
-            pbCameraIcon = new PictureBox
+            pbUploadIcon = new PictureBox
             {
-                Size = new Size(32, 32),
+                Size = new Size(26, 26),
                 BackColor = Color.Transparent,
                 BorderStyle = BorderStyle.None,
                 Cursor = Cursors.Hand,
                 SizeMode = PictureBoxSizeMode.StretchImage,
-                Location = new Point(0, (inputPanelHeight - 32) / 2),
+                Location = new Point(10, (inputPanelHeight - 26) / 2),
+                Visible = true
+            };
+            LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
+            pbUploadIcon.Click += PbCameraIcon_Click;
+
+            pbCameraIcon = new PictureBox
+            {
+                Size = new Size(26, 26),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Location = new Point(40, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-            pbCameraIcon.Click += PbCameraIcon_Click;
 
             pbMicIcon = new PictureBox
             {
@@ -607,27 +606,31 @@ namespace RoastMyCode
                 BorderStyle = BorderStyle.None,
                 Cursor = Cursors.Hand,
                 SizeMode = PictureBoxSizeMode.StretchImage,
-                Location = new Point(35, (inputPanelHeight - 26) / 2),
+                Location = new Point(70, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
             LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
 
-            leftIconsPanel.Controls.AddRange(new Control[] { pbCameraIcon, pbMicIcon });
+            leftIconsPanel.Controls.Add(pbUploadIcon);
+            leftIconsPanel.Controls.Add(pbCameraIcon);
+            leftIconsPanel.Controls.Add(pbMicIcon);
+            leftIconsPanel.BringToFront();
+            
+            leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
 
             rtInput = new RichTextBox
             {
-                Width = inputPanelWidth - 100,
+                Width = inputPanelWidth - 120,
                 Height = inputPanelHeight - 10,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 10),
                 Padding = new Padding(10, 5, 10, 5),
-                Location = new Point(60, 5),
+                Location = new Point(110, 5),
                 Text = "Type your message here..."
             };
 
-            // Add focus handlers
             rtInput.GotFocus += (s, e) => {
                 if (rtInput.Text == "Type your message here...")
                 {
@@ -650,7 +653,8 @@ namespace RoastMyCode
             leftIconsPanel.BringToFront();
             sendButtonPanel.BringToFront();
 
-            rtInput.TextChanged += (s, e) => {
+            rtInput.TextChanged += (s, e) =>
+            {
                 if (rtInput.Text.Length > 0 && rtInput.Text != "Type your message here...")
                 {
                     rtInput.SelectionStart = rtInput.Text.Length;
@@ -658,17 +662,23 @@ namespace RoastMyCode
                 }
             };
 
-            chatFlowPanel.Resize += ChatFlowPanel_Resize;
+            chatAreaPanel.Resize += ChatAreaPanel_Resize;
+            pbGradientBackground.SendToBack();
+            chatAreaPanel.BringToFront();
+            topPanel.BringToFront();
+            bottomPanel.BringToFront();
+            inputPanel.BringToFront();
         }
-        private void ChatFlowPanel_Resize(object? sender, EventArgs e)
+
+        private void ChatAreaPanel_Resize(object? sender, EventArgs e)
         {
-            int panelWidth = chatFlowPanel.ClientSize.Width;
+            int panelWidth = chatAreaPanel.ClientSize.Width;
             if (panelWidth <= 0) return;
 
-            int desiredBubbleWidth = (int)(panelWidth * 0.70) - chatFlowPanel.Padding.Horizontal - (chatFlowPanel.Controls.Count > 0 ? chatFlowPanel.Controls[0].Margin.Horizontal : 0); 
+            int desiredBubbleWidth = (int)(panelWidth * 0.70) - chatAreaPanel.Padding.Horizontal - (chatAreaPanel.Controls.Count > 0 ? chatAreaPanel.Controls[0].Margin.Horizontal : 0); 
             if (desiredBubbleWidth < 1) desiredBubbleWidth = 1;
 
-            foreach (Control control in chatFlowPanel.Controls)
+            foreach (Control control in chatAreaPanel.Controls)
             {
                 if (control is ChatMessageBubble bubble)
                 {
@@ -677,18 +687,18 @@ namespace RoastMyCode
 
                     if (bubble.Role == "user")
                     {
-                        bubble.Left = panelWidth - chatFlowPanel.Padding.Right - bubble.Width;
+                        bubble.Left = panelWidth - chatAreaPanel.Padding.Right - bubble.Width;
                     }
                     else
                     {
-                        bubble.Left = chatFlowPanel.Padding.Left;
+                        bubble.Left = chatAreaPanel.Padding.Left;
                     }
 
                     bubble.PerformLayout();
                 }
             }
-            chatFlowPanel.Invalidate(true);
-            chatFlowPanel.PerformLayout();
+            chatAreaPanel.Invalidate(true);
+            chatAreaPanel.PerformLayout();
         }
 
         private void LoadConversationHistory()
@@ -733,6 +743,16 @@ namespace RoastMyCode
                 MessageBox.Show($"Image file not found at: {assetsPath}", "Image Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void Form1_Resize(object? sender, EventArgs e)
+        {
+            if (pbGradientBackground != null)
+            {
+                pbGradientBackground.Height = this.ClientSize.Height / 2;
+                pbGradientBackground.SendToBack();
+            }
+        }
+
 
         private void ApplyTheme()
         {
@@ -950,42 +970,28 @@ namespace RoastMyCode
             };
 
             chatAreaPanel.Controls.Add(bubble);
+            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
             PositionChatBubbles();
 
-            if (chatAreaPanel.VerticalScroll.Visible)
-            {
-                chatAreaPanel.ScrollControlIntoView(bubble);
-            }
+            chatAreaPanel.ScrollControlIntoView(bubble);
         }
 
-        private void ChatFlowPanel_ControlAdded(object? sender, ControlEventArgs e)
+        private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
         {
             if (e.Control is ChatMessageBubble bubble)
             {
-                bubble.PerformLayout();
+                PositionChatBubbles();
+                chatAreaPanel.ScrollControlIntoView(bubble);
             }
         }
-
-        private void ChatAreaPanel_Resize(object? sender, EventArgs e)
-        {
-            PositionChatBubbles();
-        }
-
-        private void Form1_Resize(object? sender, EventArgs e)
-        {
-            if (pbGradientBackground != null)
-            {
-                pbGradientBackground.Height = this.ClientSize.Height / 2;
-            }
-            PositionChatAreaPanel();
             
-            // Update download button position on resize
-            var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
-            if (downloadButton != null)
-            {
-                downloadButton.Location = new Point(this.ClientSize.Width - downloadButton.Width - 20, 10);
-            }
-        }
+        //     // Update download button position on resize
+        //     var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
+        //     if (downloadButton != null)
+        //     {
+        //         downloadButton.Location = new Point(this.ClientSize.Width - downloadButton.Width - 20, 10);
+        //     }
+        // }
 
         private void PositionChatBubbles()
         {
@@ -1044,14 +1050,15 @@ namespace RoastMyCode
             _isDarkMode = !_isDarkMode;
             ApplyTheme();
             UpdateThemeIcon();
-            LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
-            LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-            LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
+            if (pbSendIcon != null) LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
+            if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+            if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
+            if (pbUploadIcon != null) LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
         }
 
         private void UpdateThemeIcon()
         {
-            LoadImageFromAssets(pbThemeToggle, _isDarkMode ? "brightness.png" : "moon.png");
+            if (pbThemeToggle != null) LoadImageFromAssets(pbThemeToggle, _isDarkMode ? "brightness.png" : "moon.png");
         }
 
         private void ShowDownloadButton()
@@ -1062,7 +1069,6 @@ namespace RoastMyCode
                 return;
             }
 
-            // Remove existing download button if any
             var existingButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
             existingButton?.Dispose();
 
@@ -1083,7 +1089,6 @@ namespace RoastMyCode
 
             downloadButton.Click += (s, e) => DownloadCodeBundle();
             
-            // Add hover effects
             downloadButton.MouseEnter += (s, e) => {
                 downloadButton.BackColor = Color.FromArgb(0, 100, 180);
             };
@@ -1141,14 +1146,12 @@ namespace RoastMyCode
 
                         try
                         {
-                            // Save all files to temp directory
                             foreach (var file in _uploadedFiles)
                             {
                                 string filePath = Path.Combine(tempDir, file.Key);
                                 File.WriteAllText(filePath, file.Value);
                             }
 
-                            // Create ZIP
                             if (File.Exists(saveFileDialog.FileName))
                             {
                                 File.Delete(saveFileDialog.FileName);
@@ -1160,7 +1163,6 @@ namespace RoastMyCode
                         }
                         finally
                         {
-                            // Clean up temp directory
                             try { Directory.Delete(tempDir, true); }
                             catch { /* Ignore cleanup errors */ }
                         }
@@ -1181,13 +1183,11 @@ namespace RoastMyCode
             var fileLanguages = new Dictionary<string, string>();
             var zipFileInfo = new FileInfo(zipPath);
             
-            // Check if ZIP file itself is within size limits
             if (zipFileInfo.Length > _fileUploadOptions.MaxFileSizeBytes)
             {
                 return (string.Empty, $"ZIP file '{Path.GetFileName(zipPath)}' exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB");
             }
 
-            // Calculate remaining space for extraction
             long remainingSpace = _fileUploadOptions.MaxTotalSizeBytes - _currentTotalSizeBytes;
             if (zipFileInfo.Length > remainingSpace)
             {
@@ -1198,32 +1198,27 @@ namespace RoastMyCode
             {
                 tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                 Directory.CreateDirectory(tempDir);
-                
-                // Extract all files
+                   
                 using (var archive = ZipFile.OpenRead(zipPath))
                 {
-                    // First pass: validate all files in the ZIP
                     foreach (var entry in archive.Entries)
                     {
-                        if (!entry.FullName.EndsWith("/")) // Skip directories
+                        if (!entry.FullName.EndsWith("/")) 
                         {
                             string fileName = Path.GetFileName(entry.FullName);
                             if (string.IsNullOrEmpty(fileName)) continue;
                             
-                            // Check file type
                             string ext = Path.GetExtension(entry.Name).ToLowerInvariant();
                             if (!_fileUploadOptions.AllowedExtensions.Contains(ext) && !_languageMap.ContainsKey(fileName.ToLowerInvariant()))
                             {
                                 return (string.Empty, $"ZIP contains disallowed file type: {entry.Name}");
                             }
                             
-                            // Check individual file size
                             if (entry.Length > _fileUploadOptions.MaxFileSizeBytes)
                             {
                                 return (string.Empty, $"ZIP contains file '{entry.Name}' that exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB");
                             }
                             
-                            // Check total extracted size
                             if (entry.Length > remainingSpace)
                             {
                                 return (string.Empty, $"Extracting this ZIP would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB");
@@ -1233,10 +1228,9 @@ namespace RoastMyCode
                         }
                     }
                     
-                    // Second pass: extract and process files
                     foreach (var entry in archive.Entries)
                     {
-                        if (entry.FullName.EndsWith("/")) continue; // Skip directories
+                        if (entry.FullName.EndsWith("/")) continue; 
                         
                         string entryPath = Path.Combine(tempDir, entry.FullName);
                         string? directoryPath = Path.GetDirectoryName(entryPath);
@@ -1250,7 +1244,6 @@ namespace RoastMyCode
                     }
                 }
 
-                // Get all code files in the extracted directory
                 var codeFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
                     .Where(f => {
                         string ext = Path.GetExtension(f).ToLowerInvariant();
@@ -1265,7 +1258,6 @@ namespace RoastMyCode
                     return ($"No supported code files found in {Path.GetFileName(zipPath)}", string.Empty);
                 }
 
-                // First pass: detect languages for all files and update total size
                 foreach (string file in codeFiles)
                 {
                     try
@@ -1275,18 +1267,15 @@ namespace RoastMyCode
                         string language = DetectLanguage(relativePath, content);
                         fileLanguages[relativePath] = language;
                         
-                        // Store file content for later use
                         _uploadedFiles[relativePath] = content;
                         _currentTotalSizeBytes += new FileInfo(file).Length;
                     }
                     catch (Exception ex)
                     {
-                        // Log but continue with other files
                         Debug.WriteLine($"Error processing {file}: {ex.Message}");
                     }
                 }
 
-                // Try to identify main entry points
                 var possibleMains = codeFiles.Where(f => 
                     f.IndexOf("program", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     f.IndexOf("main", StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -1294,10 +1283,8 @@ namespace RoastMyCode
                     f.IndexOf("index", StringComparison.OrdinalIgnoreCase) >= 0)
                     .ToList();
 
-                // Process main files first, then others
                 var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
 
-                // Second pass: generate output with language information
                 foreach (string file in filesToProcess)
                 {
                     try
@@ -1326,7 +1313,6 @@ namespace RoastMyCode
             }
             catch (Exception ex)
             {
-                // If we encounter an error, clean up any files we might have added
                 foreach (var file in processedFiles)
                 {
                     _uploadedFiles.Remove(file);
@@ -1337,7 +1323,6 @@ namespace RoastMyCode
             }
             finally
             {
-                // Clean up extracted files
                 try 
                 { 
                     if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
@@ -1411,7 +1396,6 @@ namespace RoastMyCode
                 }
             }
 
-            // Update the total size if all files are valid
             if (errors.Count == 0)
             {
                 _currentTotalSizeBytes += totalSize;
@@ -1427,7 +1411,6 @@ namespace RoastMyCode
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Multiselect = true;
-                    // Build filter string from allowed extensions
                     string filter = "Supported Files|*" + string.Join(";*", _fileUploadOptions.AllowedExtensions) + 
                                  "|ZIP Archives|*.zip|All Files|*.*";
                     openFileDialog.Filter = filter;
@@ -1440,11 +1423,9 @@ namespace RoastMyCode
                         List<string> fileContents = new List<string>();
                         var filesToProcess = new List<string>(openFileDialog.FileNames);
                         
-                        // Validate files before processing
                         if (!ValidateFiles(filesToProcess, out var validFiles, out var validationErrors))
                         {
-                            // Show validation errors to user
-                            foreach (var error in validationErrors.Take(5)) // Limit to first 5 errors to avoid flooding
+                            foreach (var error in validationErrors.Take(5))
                             {
                                 AddChatMessage(error, "system");
                             }
@@ -1454,7 +1435,6 @@ namespace RoastMyCode
                                 AddChatMessage($"... and {validationErrors.Count - 5} more files had issues", "system");
                             }
                             
-                            // If no files are valid, don't clear previous uploads
                             if (validFiles.Count == 0)
                             {
                                 return;
@@ -1464,11 +1444,9 @@ namespace RoastMyCode
                         }
                         else
                         {
-                            // If all files are valid, clear previous uploads
                             ResetUploads();
                         }
                         
-                        // Process each valid file
                         foreach (string fileName in filesToProcess)
                         {
                             try 
@@ -1491,13 +1469,12 @@ namespace RoastMyCode
                                     string displayName = Path.GetFileName(fileName);
                                     string language = DetectLanguage(fileName, content);
                                     
-                                    // Only add to uploaded files if not already processed by ZIP
                                     if (!_uploadedFiles.ContainsKey(displayName))
                                     {
                                         _uploadedFiles[displayName] = content;
                                         fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                     }
-                                _uploadedFiles[displayName] = content; // Store file content with its name as key
+                                _uploadedFiles[displayName] = content;
                                 fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                 }
                             }
@@ -1513,7 +1490,6 @@ namespace RoastMyCode
                             AddChatMessage(combinedContent, "user");
                             _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
                             
-                            // Show download button if we have files
                             if (_uploadedFiles.Count > 0)
                             {
                                 ShowDownloadButton();
@@ -1528,25 +1504,7 @@ namespace RoastMyCode
             }
         }
 
-        private void PositionChatAreaPanel()
-        {
-            if (topPanel != null && bottomPanel != null && chatAreaPanel != null && titleLogoPanel != null)
-            {
-                int x = 0;
-                int y = topPanel.Top + titleLogoPanel.Top + titleLogoPanel.Height + 30;
-                int width = this.ClientSize.Width;
-                int height = bottomPanel.Top - y;
-
-                if (height < 0) height = 0;
-
-                chatAreaPanel.Location = new Point(x, y);
-                chatAreaPanel.Size = new Size(width, height);
-
-                PositionChatBubbles();
-            }
-        }
-    }
-
+    }   
     public class RoundedRichTextBox : RichTextBox
     {
         private int cornerRadius = 20;
@@ -1619,44 +1577,44 @@ namespace RoastMyCode
             base.OnResize(e);
             Invalidate();
         }
-    }
 
-    public class RoundedPanel : Panel
-    {
-        public int CornerRadius { get; set; } = 18;
-        public Color BorderColor { get; set; } = Color.Gray;
-        public int BorderWidth { get; set; } = 1;
-
-        public RoundedPanel()
+        public class RoundedPanel : Panel
         {
-            this.SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-            this.BackColor = Color.White;
-        }
+            public int CornerRadius { get; set; } = 18;
+            public Color BorderColor { get; set; } = Color.Gray;
+            public int BorderWidth { get; set; } = 1;
 
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (var path = GetRoundedRect(rect, CornerRadius))
-            using (var brush = new SolidBrush(this.BackColor))
-            using (var pen = new Pen(BorderColor, BorderWidth))
+            public RoundedPanel()
             {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                e.Graphics.FillPath(brush, path);
-                e.Graphics.DrawPath(pen, path);
+                this.SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+                this.BackColor = Color.White;
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                base.OnPaint(e);
+                var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+                using (var path = GetRoundedRect(rect, CornerRadius))
+                using (var brush = new SolidBrush(this.BackColor))
+                using (var pen = new Pen(BorderColor, BorderWidth))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+
+            private GraphicsPath GetRoundedRect(Rectangle rect, int radius)
+            {
+                var path = new GraphicsPath();
+                int d = radius * 2;
+                path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                path.CloseFigure();
+                return path;
             }
         }
-
-        private GraphicsPath GetRoundedRect(Rectangle rect, int radius)
-        {
-            var path = new GraphicsPath();
-            int d = radius * 2;
-            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
     }
-}
+}   
