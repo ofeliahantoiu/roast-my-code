@@ -79,6 +79,7 @@ namespace RoastMyCode
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
+        private CurrentLanguageDisplay languageDisplay = null!;
 
 
         public Form1(IConfiguration configuration, IServiceProvider serviceProvider)
@@ -298,6 +299,16 @@ namespace RoastMyCode
                      ((topPanel.Height - titleLogoPanel.Height) / 2) + verticalOffset
                  );
              };
+
+            // Add language display to the top right corner
+            languageDisplay = new CurrentLanguageDisplay
+            {
+                Size = new Size(200, 80),
+                Location = new Point(this.ClientSize.Width - 220, 10),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                IsDarkMode = _isDarkMode
+            };
+            topPanel.Controls.Add(languageDisplay);
 
             FlowLayoutPanel leftControlsPanel = new FlowLayoutPanel
             {
@@ -769,6 +780,13 @@ namespace RoastMyCode
                 ApplyThemeToControl(control, _isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
             }
 
+            // Update language display theme
+            if (languageDisplay != null)
+            {
+                languageDisplay.IsDarkMode = _isDarkMode;
+                languageDisplay.Invalidate(); // Force redraw
+            }
+
             UpdateLogoIcon();
         }
 
@@ -947,8 +965,27 @@ namespace RoastMyCode
 
         private void SendMessage()
         {
-            AddChatMessage(rtInput.Text, "user");
-            _conversationHistory.Add(new ChatMessage { Content = rtInput.Text, Role = "user" });
+            string message = rtInput.Text;
+            
+            // Check for code in the message and update language display directly
+            if (message.Contains("{") && message.Contains("}") && message.Length > 20)
+            {
+                // Directly detect language from code content
+                string detectedLanguage = "C#"; // Default to C#
+                
+                if (message.Contains("def ") && message.Contains(":"))
+                    detectedLanguage = "Python";
+                else if (message.Contains("function") || message.Contains("=>"))
+                    detectedLanguage = "JavaScript";
+                else if (message.Contains("public static void main"))
+                    detectedLanguage = "Java";
+                
+                // Update the language display immediately
+                UpdateLanguageDisplay(detectedLanguage);
+            }
+            
+            AddChatMessage(message, "user");
+            _conversationHistory.Add(new ChatMessage { Content = message, Role = "user" });
             rtInput.Text = "Type your message here...";
             rtInput.ForeColor = Color.FromArgb(150, 150, 150);
             rtInput.SelectionStart = 0;
@@ -970,22 +1007,50 @@ namespace RoastMyCode
             };
 
             chatAreaPanel.Controls.Add(bubble);
-            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
+            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1);
 
-            // Check if this is a code message and extract language information
             if (role == "user")
             {
+                // Try to extract language from the message
                 string language = ExtractLanguageFromMessage(message);
+                
+                // If we detected a language, update the UI
                 if (!string.IsNullOrEmpty(language))
                 {
-                    // Create and add language badge
+                    // Add language badge to chat message
                     LanguageBadge languageBadge = new LanguageBadge
                     {
                         Language = language,
                         Location = new Point(bubble.Left, bubble.Top - 20)
                     };
                     chatAreaPanel.Controls.Add(languageBadge);
-                    chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2); // Place before bubble
+                    chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2);
+                    
+                    // Update the language display in the corner
+                    UpdateLanguageDisplay(language);
+                    
+                    Debug.WriteLine($"User message with language: {language}");
+                }
+                else if (message.Contains("{") && message.Contains("}") && message.Length > 20)
+                {
+                    // If message contains code-like content but no specific language was detected
+                    // Set a default language based on content patterns
+                    if (message.Contains("public") || message.Contains("private") || message.Contains("class"))
+                    {
+                        UpdateLanguageDisplay("C#");
+                        Debug.WriteLine("Set default language to C#");
+                    }
+                }
+            }
+            else
+            {
+                // For non-user messages (AI or system)
+                string language = ExtractLanguageFromMessage(message);
+                if (!string.IsNullOrEmpty(language))
+                {
+                    // Update the language display in the corner
+                    UpdateLanguageDisplay(language);
+                    Debug.WriteLine($"Non-user message with language: {language}");
                 }
             }
 
@@ -995,24 +1060,88 @@ namespace RoastMyCode
 
         private string ExtractLanguageFromMessage(string message)
         {
-            // Extract language information from message content
-            // Format is typically "=== filename.ext (Language) ==="
             string language = string.Empty;
-            
             try
             {
+                // First try to match the file header format: === filename.ext (Language) ===
                 var match = Regex.Match(message, @"===\s+.+\s+\(([^)]+)\)\s+===");
                 if (match.Success && match.Groups.Count > 1)
                 {
                     language = match.Groups[1].Value.Trim();
+                    Debug.WriteLine($"Detected language from file header: {language}");
+                    return language;
+                }
+                
+                // Try to find code snippets with markdown language identifiers
+                var codeBlockMatch = Regex.Match(message, @"```([a-zA-Z0-9#+]+)");
+                if (codeBlockMatch.Success && codeBlockMatch.Groups.Count > 1)
+                {
+                    language = codeBlockMatch.Groups[1].Value.Trim();
+                    Debug.WriteLine($"Detected language from markdown code block: {language}");
+                    return language;
+                }
+                
+                // Try to detect language from code content
+                if (message.Contains("public class") || message.Contains("private class") || 
+                    message.Contains("namespace") || message.Contains("using System"))
+                {
+                    language = "C#";
+                    Debug.WriteLine("Detected C# from code patterns");
+                    return language;
+                }
+                else if (message.Contains("function") && (message.Contains("{") || message.Contains("=>")))
+                {
+                    language = "JavaScript";
+                    Debug.WriteLine("Detected JavaScript from code patterns");
+                    return language;
+                }
+                else if (message.Contains("def ") && message.Contains(":"))
+                {
+                    language = "Python";
+                    Debug.WriteLine("Detected Python from code patterns");
+                    return language;
+                }
+                else if (message.Contains("public static void main") || message.Contains("class ") && message.Contains("{"))
+                {
+                    language = "Java";
+                    Debug.WriteLine("Detected Java from code patterns");
+                    return language;
+                }
+                
+                Debug.WriteLine("No language detected in message");
+            }
+            catch (Exception ex) 
+            { 
+                Debug.WriteLine($"Error extracting language: {ex.Message}");
+            }
+            return language;
+        }
+
+        /// <summary>
+        /// Updates the language display control with the detected programming language
+        /// </summary>
+        /// <param name="language">The detected programming language name</param>
+        private void UpdateLanguageDisplay(string language)
+        {
+            Debug.WriteLine($"UpdateLanguageDisplay called with language: {language}");
+            if (languageDisplay != null)
+            {
+                Debug.WriteLine("languageDisplay control exists");
+                if (!string.IsNullOrEmpty(language))
+                {
+                    languageDisplay.Language = language;
+                    languageDisplay.Invalidate();
+                    Debug.WriteLine($"Updated language display to: {language}");
+                }
+                else
+                {
+                    Debug.WriteLine("Language was empty, not updating display");
                 }
             }
-            catch
+            else
             {
-                // Ignore regex errors
+                Debug.WriteLine("languageDisplay control is null");
             }
-            
-            return language;
         }
 
         private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
@@ -1464,9 +1593,10 @@ namespace RoastMyCode
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Multiselect = true;
-                    string filter = "Supported Files|*" + string.Join(";*", _fileUploadOptions.AllowedExtensions) + 
+                    string filter = "Supported Files|*" + string.Join(";", _fileUploadOptions.AllowedExtensions) + 
                                  "|ZIP Archives|*.zip|All Files|*.*";
                     openFileDialog.Filter = filter;
+                    string lastDetectedLanguage = string.Empty;
                     openFileDialog.Title = $"Select Files to Upload (Max {_fileUploadOptions.MaxFileSizeMB}MB per file, {_fileUploadOptions.MaxTotalSizeMB}MB total)";
                     openFileDialog.CheckFileExists = true;
                     openFileDialog.CheckPathExists = true;
@@ -1522,13 +1652,16 @@ namespace RoastMyCode
                                     string displayName = Path.GetFileName(fileName);
                                     string language = DetectLanguage(fileName, content);
                                     
+                                    // Store the last detected language for updating the display
+                                    lastDetectedLanguage = language;
+                                    
                                     if (!_uploadedFiles.ContainsKey(displayName))
                                     {
                                         _uploadedFiles[displayName] = content;
                                         fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                     }
-                                _uploadedFiles[displayName] = content;
-                                fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
+                                    _uploadedFiles[displayName] = content;
+                                    fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                 }
                             }
                             catch (Exception ex)
@@ -1542,6 +1675,12 @@ namespace RoastMyCode
                             string combinedContent = string.Join("\n\n", fileContents);
                             AddChatMessage(combinedContent, "user");
                             _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
+                            
+                            // Update the language display with the last detected language
+                            if (!string.IsNullOrEmpty(lastDetectedLanguage))
+                            {
+                                UpdateLanguageDisplay(lastDetectedLanguage);
+                            }
                             
                             if (_uploadedFiles.Count > 0)
                             {
