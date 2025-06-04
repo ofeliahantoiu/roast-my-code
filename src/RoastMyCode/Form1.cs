@@ -142,7 +142,7 @@ namespace RoastMyCode
                 
                 if (_fileUploadOptions.AllowedExtensions == null || _fileUploadOptions.AllowedExtensions.Length == 0)
                 {
-                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py" }; 
+                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py", ".css" }; 
                 }
                 
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
@@ -673,6 +673,19 @@ namespace RoastMyCode
                 Padding = new Padding(10, 5, 10, 5),
                 Location = new Point(110, 5),
                 Text = "Type your message here..."
+            };
+            
+            // Add Enter key functionality
+            rtInput.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && !e.Shift)
+                {
+                    e.SuppressKeyPress = true;
+                    if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
+                    {
+                        SendMessage();
+                    }
+                }
             };
 
             rtInput.GotFocus += (s, e) => {
