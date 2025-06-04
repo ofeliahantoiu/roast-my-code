@@ -27,7 +27,7 @@ namespace RoastMyCode
         private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>();   
         private string[] _codeExtensions = Array.Empty<string>(); 
         private long _currentTotalSizeBytes = 0;
-        private WebcamControl _webcamControl; 
+        private WebcamControl? _webcamControl; 
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
@@ -62,8 +62,13 @@ namespace RoastMyCode
             
             ["dockerfile"] = "Dockerfile",
             [".dockerignore"] = "Docker Ignore",
-            private Panel topPanel = null!;
-        private Panel bottomPanel = null!;
+            [".gitignore"] = "Git Ignore",
+            ["makefile"] = "Makefile",
+            ["readme"] = "Readme",
+            ["license"] = "License"
+        };
+        
+        // Panel fields are declared in Form1.Designer.cs
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
@@ -102,7 +107,6 @@ namespace RoastMyCode
                 }
                 
                 InitializeComponent();
-                InitializeUI();
                 InitializeWebcam();
                 InitializeModernUI();
                 ApplyTheme();
@@ -167,16 +171,56 @@ namespace RoastMyCode
             }
         }
         
-        private void WebcamControl_WebcamPermissionChanged(object sender, WebcamPermissionEventArgs e)
+        private void WebcamControl_WebcamPermissionChanged(object? sender, WebcamPermissionEventArgs e)
         {
             // Handle webcam permission changes
             if (e.IsPermissionGranted)
             {
                 Debug.WriteLine("Webcam permission granted");
+                // Update camera icon to indicate webcam is active
+                if (pbCameraIcon != null)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
+                }
             }
             else
             {
                 Debug.WriteLine("Webcam permission denied or webcam stopped");
+                // Update camera icon to indicate webcam is inactive
+                if (pbCameraIcon != null)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+                }
+            }
+        }
+        
+        private void ToggleWebcam_Click(object? sender, EventArgs e)
+        {
+            if (_webcamControl == null) return;
+            
+            if (_webcamControl.Visible && _webcamControl.IsWebcamActive)
+            {
+                // Webcam is active, stop it
+                _webcamControl.StopWebcam();
+                _webcamControl.Visible = false;
+                
+                // Update camera icon
+                if (pbCameraIcon != null)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+                }
+            }
+            else
+            {
+                // Webcam is inactive, start it
+                _webcamControl.Visible = true;
+                _webcamControl.StartWebcam();
+                
+                // Update camera icon
+                if (pbCameraIcon != null)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
+                }
             }
         }
         
@@ -729,6 +773,7 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+            pbCameraIcon.Click += ToggleWebcam_Click;
 
             pbMicIcon = new PictureBox
             {

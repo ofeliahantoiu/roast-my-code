@@ -5,6 +5,8 @@ using System.Windows.Forms;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using AForge.Imaging.Filters;
+using AForge;
+using AForge.Imaging;
 
 namespace RoastMyCode
 {
@@ -14,24 +16,24 @@ namespace RoastMyCode
     public class WebcamControl : Panel
     {
         // Webcam devices and capture
-        private FilterInfoCollection _videoDevices;
-        private VideoCaptureDevice _videoSource;
+        private FilterInfoCollection? _videoDevices;
+        private VideoCaptureDevice? _videoSource;
         private bool _isWebcamActive = false;
         
         // UI components
-        private PictureBox _displayBox;
-        private Button _startButton;
-        private Button _stopButton;
-        private ComboBox _effectsComboBox;
-        private Label _statusLabel;
+        private PictureBox? _displayBox;
+        private Button? _startButton;
+        private Button? _stopButton;
+        private ComboBox? _effectsComboBox;
+        private Label? _statusLabel;
         
         // Effect settings
         private string _currentEffect = "None";
-        private Bitmap _currentFrame;
+        private Bitmap? _currentFrame;
         private bool _isDarkMode = true;
         
         // Events
-        public event EventHandler<WebcamPermissionEventArgs> WebcamPermissionChanged;
+        public event EventHandler<WebcamPermissionEventArgs>? WebcamPermissionChanged;
 
         public bool IsWebcamActive => _isWebcamActive;
         
@@ -76,7 +78,7 @@ namespace RoastMyCode
             _displayBox = new PictureBox
             {
                 Size = new Size(320, 240),
-                Location = new Point(0, 0),
+                Location = new System.Drawing.Point(0, 0),
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 BackColor = _isDarkMode ? Color.FromArgb(20, 20, 20) : Color.LightGray
             };
@@ -86,7 +88,7 @@ namespace RoastMyCode
             {
                 Text = "Webcam: Not active",
                 ForeColor = _isDarkMode ? Color.White : Color.Black,
-                Location = new Point(10, 245),
+                Location = new System.Drawing.Point(10, 245),
                 AutoSize = true
             };
             
@@ -94,7 +96,7 @@ namespace RoastMyCode
             _startButton = new Button
             {
                 Text = "Start Webcam",
-                Location = new Point(10, 245),
+                Location = new System.Drawing.Point(10, 245),
                 Size = new Size(100, 25),
                 BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray,
                 ForeColor = _isDarkMode ? Color.White : Color.Black
@@ -105,7 +107,7 @@ namespace RoastMyCode
             _stopButton = new Button
             {
                 Text = "Stop Webcam",
-                Location = new Point(120, 245),
+                Location = new System.Drawing.Point(120, 245),
                 Size = new Size(100, 25),
                 BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray,
                 ForeColor = _isDarkMode ? Color.White : Color.Black,
@@ -116,7 +118,7 @@ namespace RoastMyCode
             // Create effects combo box
             _effectsComboBox = new ComboBox
             {
-                Location = new Point(230, 245),
+                Location = new System.Drawing.Point(230, 245),
                 Size = new Size(80, 25),
                 BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.White,
                 ForeColor = _isDarkMode ? Color.White : Color.Black
@@ -155,19 +157,19 @@ namespace RoastMyCode
             }
         }
         
-        private void StartButton_Click(object sender, EventArgs e)
+        private void StartButton_Click(object? sender, EventArgs e)
         {
             StartWebcam();
         }
         
-        private void StopButton_Click(object sender, EventArgs e)
+        private void StopButton_Click(object? sender, EventArgs e)
         {
             StopWebcam();
         }
         
-        private void EffectsComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void EffectsComboBox_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            _currentEffect = _effectsComboBox.SelectedItem.ToString();
+            _currentEffect = _effectsComboBox?.SelectedItem?.ToString() ?? "None";
         }
         
         public void StartWebcam()
@@ -190,9 +192,12 @@ namespace RoastMyCode
                 _isWebcamActive = true;
                 
                 // Update UI
-                _startButton.Enabled = false;
-                _stopButton.Enabled = true;
-                _statusLabel.Visible = false;
+                if (_startButton != null)
+                    _startButton.Enabled = false;
+                if (_stopButton != null)
+                    _stopButton.Enabled = true;
+                if (_statusLabel != null)
+                    _statusLabel.Visible = false;
                 
                 // Notify that webcam is active
                 OnWebcamPermissionChanged(true);
@@ -216,19 +221,25 @@ namespace RoastMyCode
                 _isWebcamActive = false;
                 
                 // Clear the display
-                _displayBox.Image = null;
+                if (_displayBox != null && _displayBox.Image != null)
+                {
+                    _displayBox.Image.Dispose();
+                    _displayBox.Image = null;
+                }
                 _currentFrame = null;
                 
                 // Update UI
-                _startButton.Enabled = true;
-                _stopButton.Enabled = false;
+                if (_startButton != null)
+                    _startButton.Enabled = true;
+                if (_stopButton != null)
+                    _stopButton.Enabled = false;
                 
                 // Notify that webcam is inactive
                 OnWebcamPermissionChanged(false);
             }
         }
         
-        private void VideoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        private void VideoSource_NewFrame(object? sender, NewFrameEventArgs eventArgs)
         {
             // Make a copy of the current frame
             _currentFrame = (Bitmap)eventArgs.Frame.Clone();
@@ -237,12 +248,18 @@ namespace RoastMyCode
             ApplyEffect();
             
             // Update the display
-            if (_displayBox.Image != null)
+            if (_displayBox != null)
             {
-                _displayBox.Image.Dispose();
+                if (_displayBox.Image != null)
+                {
+                    _displayBox.Image.Dispose();
+                }
+                
+                if (_currentFrame != null)
+                {
+                    _displayBox.Image = (Bitmap)_currentFrame.Clone();
+                }
             }
-            
-            _displayBox.Image = (Bitmap)_currentFrame.Clone();
         }
         
         private void ApplyEffect()
@@ -264,10 +281,9 @@ namespace RoastMyCode
                     break;
                     
                 case "Clown":
-                    // Apply a combination of effects for a clown-like appearance
-                    // Increase saturation and apply a red tint
+                    // Increase saturation and distort colors for clown effect
                     HSLFiltering hslFilter = new HSLFiltering();
-                    hslFilter.SaturationAdjustment = 0.6f;
+                    hslFilter.Saturation = new AForge.Range(0.6f, 1.0f); // Use Saturation property
                     processedFrame = hslFilter.Apply(processedFrame);
                     
                     // Add some color distortion
@@ -302,24 +318,47 @@ namespace RoastMyCode
         
         private void ShowWebcamError(string message)
         {
-            _statusLabel.Text = message;
-            _statusLabel.ForeColor = Color.Red;
-            _statusLabel.Visible = true;
-            _startButton.Enabled = true;
-            _stopButton.Enabled = false;
+            if (_statusLabel != null)
+            {
+                _statusLabel.Text = message;
+                _statusLabel.ForeColor = Color.Red;
+                _statusLabel.Visible = true;
+            }
+            
+            if (_startButton != null)
+                _startButton.Enabled = true;
+                
+            if (_stopButton != null)
+                _stopButton.Enabled = false;
         }
         
         private void UpdateAppearance()
         {
             this.BackColor = _isDarkMode ? Color.FromArgb(30, 30, 30) : Color.White;
-            _displayBox.BackColor = _isDarkMode ? Color.FromArgb(20, 20, 20) : Color.LightGray;
-            _statusLabel.ForeColor = _isDarkMode ? Color.White : Color.Black;
-            _startButton.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray;
-            _startButton.ForeColor = _isDarkMode ? Color.White : Color.Black;
-            _stopButton.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray;
-            _stopButton.ForeColor = _isDarkMode ? Color.White : Color.Black;
-            _effectsComboBox.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.White;
-            _effectsComboBox.ForeColor = _isDarkMode ? Color.White : Color.Black;
+            
+            if (_displayBox != null)
+                _displayBox.BackColor = _isDarkMode ? Color.FromArgb(20, 20, 20) : Color.LightGray;
+                
+            if (_statusLabel != null)
+                _statusLabel.ForeColor = _isDarkMode ? Color.White : Color.Black;
+                
+            if (_startButton != null)
+            {
+                _startButton.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray;
+                _startButton.ForeColor = _isDarkMode ? Color.White : Color.Black;
+            }
+            
+            if (_stopButton != null)
+            {
+                _stopButton.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray;
+                _stopButton.ForeColor = _isDarkMode ? Color.White : Color.Black;
+            }
+            
+            if (_effectsComboBox != null)
+            {
+                _effectsComboBox.BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.White;
+                _effectsComboBox.ForeColor = _isDarkMode ? Color.White : Color.Black;
+            }
         }
         
         protected void OnWebcamPermissionChanged(bool isGranted)
