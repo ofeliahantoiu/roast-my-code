@@ -62,11 +62,8 @@ namespace RoastMyCode
             
             ["dockerfile"] = "Dockerfile",
             [".dockerignore"] = "Docker Ignore",
-            [".gitignore"] = "Git Ignore",
-            ["makefile"] = "Makefile",
-            ["readme"] = "Readme",
-            ["license"] = "License"
-        };
+            private Panel topPanel = null!;
+        private Panel bottomPanel = null!;
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
@@ -104,6 +101,14 @@ namespace RoastMyCode
                     _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py" }; 
                 }
                 
+                InitializeComponent();
+                InitializeUI();
+                InitializeWebcam();
+                InitializeModernUI();
+                ApplyTheme();
+
+                LoadConversationHistory();
+                
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
                 {
                     _fileUploadOptions.MaxFileSizeMB = 10; 
@@ -133,6 +138,120 @@ namespace RoastMyCode
                 MessageBox.Show(errorMessage, "Initialization Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw; 
             }
+        }
+        
+        private void InitializeWebcam()
+        {
+            try
+            {
+                // Create and configure webcam control
+                _webcamControl = new WebcamControl
+                {
+                    Size = new Size(320, 280),
+                    Location = new Point(this.ClientSize.Width - 340, 120),
+                    Visible = false,
+                    IsDarkMode = _isDarkMode
+                };
+                
+                // Add webcam permission changed event handler
+                _webcamControl.WebcamPermissionChanged += WebcamControl_WebcamPermissionChanged;
+                
+                // Add to form controls
+                this.Controls.Add(_webcamControl);
+                _webcamControl.BringToFront();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error initializing webcam: {ex.Message}");
+                // Continue without webcam functionality
+            }
+        }
+        
+        private void WebcamControl_WebcamPermissionChanged(object sender, WebcamPermissionEventArgs e)
+        {
+            // Handle webcam permission changes
+            if (e.IsPermissionGranted)
+            {
+                Debug.WriteLine("Webcam permission granted");
+            }
+            else
+            {
+                Debug.WriteLine("Webcam permission denied or webcam stopped");
+            }
+        }
+        
+        /// <summary>
+        /// Shows the webcam with the specified effect
+        /// </summary>
+        /// <param name="effect">The visual effect to apply</param>
+        private void ShowWebcamWithEffect(string effect)
+        {
+            if (_webcamControl != null)
+            {
+                // Make webcam visible
+                _webcamControl.Visible = true;
+                
+                // Apply the specified effect
+                _webcamControl.CurrentEffect = effect;
+                
+                // Start the webcam if it's not already active
+                if (!_webcamControl.IsWebcamActive)
+                {
+                    _webcamControl.StartWebcam();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Hides the webcam
+        /// </summary>
+        private void HideWebcam()
+        {
+            if (_webcamControl != null)
+            {
+                _webcamControl.Visible = false;
+            }
+        }
+        
+        /// <summary>
+        /// Syncs the webcam effect with the roast result based on roast severity
+        /// </summary>
+        /// <param name="roastContent">The content of the roast message</param>
+        private void SyncWebcamWithRoast(string roastContent)
+        {
+            // Determine the appropriate effect based on the roast content
+            string effect = "None";
+            
+            // Check for keywords in the roast content to determine severity
+            string contentLower = roastContent.ToLower();
+            
+            if (contentLower.Contains("terrible") || 
+                contentLower.Contains("awful") || 
+                contentLower.Contains("horrible") ||
+                contentLower.Contains("disaster"))
+            {
+                effect = "Clown"; // Severe roast
+            }
+            else if (contentLower.Contains("bad") || 
+                     contentLower.Contains("poor") || 
+                     contentLower.Contains("fix") ||
+                     contentLower.Contains("improve"))
+            {
+                effect = "Invert"; // Moderate roast
+            }
+            else if (contentLower.Contains("good") || 
+                     contentLower.Contains("nice") || 
+                     contentLower.Contains("well done"))
+            {
+                effect = "Sepia"; // Positive feedback
+            }
+            else
+            {
+                effect = "Grayscale"; // Default effect
+            }
+            
+            // Show webcam with the determined effect
+            ShowWebcamWithEffect(effect);
         }
         
         private string DetectLanguage(string fileName, string? content = null)
@@ -955,6 +1074,9 @@ namespace RoastMyCode
 
                 AddChatMessage(aiResponse, "assistant");
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                
+                // Sync webcam effect with the roast result
+                SyncWebcamWithRoast(aiResponse);
             }
             catch (Exception ex)
             {
