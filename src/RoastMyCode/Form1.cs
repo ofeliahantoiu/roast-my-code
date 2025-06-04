@@ -26,7 +26,8 @@ namespace RoastMyCode
         private Font _currentFont = new Font("Segoe UI", 10);
         private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>();   
         private string[] _codeExtensions = Array.Empty<string>(); 
-        private long _currentTotalSizeBytes = 0; 
+        private long _currentTotalSizeBytes = 0;
+        private WebcamControl _webcamControl; 
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
