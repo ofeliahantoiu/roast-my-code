@@ -971,9 +971,48 @@ namespace RoastMyCode
 
             chatAreaPanel.Controls.Add(bubble);
             chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
-            PositionChatBubbles();
 
+            // Check if this is a code message and extract language information
+            if (role == "user")
+            {
+                string language = ExtractLanguageFromMessage(message);
+                if (!string.IsNullOrEmpty(language))
+                {
+                    // Create and add language badge
+                    LanguageBadge languageBadge = new LanguageBadge
+                    {
+                        Language = language,
+                        Location = new Point(bubble.Left, bubble.Top - 20)
+                    };
+                    chatAreaPanel.Controls.Add(languageBadge);
+                    chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2); // Place before bubble
+                }
+            }
+
+            PositionChatBubbles();
             chatAreaPanel.ScrollControlIntoView(bubble);
+        }
+
+        private string ExtractLanguageFromMessage(string message)
+        {
+            // Extract language information from message content
+            // Format is typically "=== filename.ext (Language) ==="
+            string language = string.Empty;
+            
+            try
+            {
+                var match = Regex.Match(message, @"===\s+.+\s+\(([^)]+)\)\s+===");
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    language = match.Groups[1].Value.Trim();
+                }
+            }
+            catch
+            {
+                // Ignore regex errors
+            }
+            
+            return language;
         }
 
         private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
@@ -985,25 +1024,20 @@ namespace RoastMyCode
             }
         }
             
-        //     // Update download button position on resize
-        //     var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
-        //     if (downloadButton != null)
-        //     {
-        //         downloadButton.Location = new Point(this.ClientSize.Width - downloadButton.Width - 20, 10);
-        //     }
-        // }
-
         private void PositionChatBubbles()
         {
-            int panelWidth = chatAreaPanel.ClientSize.Width;
-            if (panelWidth <= 0) return;
+            if (chatAreaPanel.Controls.Count == 0) return;
 
+            int panelWidth = chatAreaPanel.ClientSize.Width;
             int availableWidth = panelWidth - chatAreaPanel.Padding.Horizontal;
             int desiredBubbleWidth = (int)(availableWidth * 0.70);
             if (desiredBubbleWidth < 100) desiredBubbleWidth = 100;
 
             int currentY = chatAreaPanel.Padding.Top;
+            Dictionary<int, ChatMessageBubble> bubblesByY = new Dictionary<int, ChatMessageBubble>();
+            List<LanguageBadge> badges = new List<LanguageBadge>();
 
+            // First pass: position all chat bubbles
             foreach (Control control in chatAreaPanel.Controls)
             {
                 if (control is ChatMessageBubble bubble)
@@ -1023,10 +1057,29 @@ namespace RoastMyCode
                     }
 
                     bubble.Top = currentY;
+                    bubblesByY[currentY] = bubble;
 
                     currentY += bubble.Height + bubble.Margin.Vertical;
                 }
+                else if (control is LanguageBadge badge)
+                {
+                    badges.Add(badge);
+                }
             }
+
+            // Second pass: position language badges above their corresponding bubbles
+            foreach (var badge in badges)
+            {
+                // Find the nearest bubble below this badge
+                var bubbleY = bubblesByY.Keys.OrderBy(y => y).FirstOrDefault(y => y >= badge.Top);
+                if (bubbleY != 0 && bubblesByY.TryGetValue(bubbleY, out var bubble))
+                {
+                    // Position badge above the bubble
+                    badge.Top = bubble.Top - badge.Height - 5;
+                    badge.Left = bubble.Left + 10;
+                }
+            }
+
             chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + 50);
             chatAreaPanel.Invalidate(true);
 
