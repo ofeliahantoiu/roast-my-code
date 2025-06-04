@@ -72,7 +72,7 @@ namespace RoastMyCode
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
         private Panel titleLogoPanel = null!;
-        private RichTextBox rtInput = null!;
+        private SyntaxHighlightingTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
         private PictureBox? pbMicIcon;
         private PictureBox? pbUploadIcon = null!;
@@ -629,17 +629,20 @@ namespace RoastMyCode
             
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
 
-            rtInput = new RichTextBox
+            rtInput = new SyntaxHighlightingTextBox
             {
                 Width = inputPanelWidth - 120,
                 Height = inputPanelHeight - 10,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                Font = new Font("Segoe UI", 10),
+                Font = new Font("Consolas", 10),
                 Padding = new Padding(10, 5, 10, 5),
                 Location = new Point(110, 5),
-                Text = "Type your message here..."
+                Text = "Type your message here...",
+                IsDarkMode = _isDarkMode,
+                HighlightingEnabled = true,
+                CornerRadius = 5
             };
 
             rtInput.GotFocus += (s, e) => {
@@ -982,6 +985,10 @@ namespace RoastMyCode
                 
                 // Update the language display immediately
                 UpdateLanguageDisplay(detectedLanguage);
+                
+                // Apply syntax highlighting to the input box
+                rtInput.Language = detectedLanguage;
+                rtInput.ApplySyntaxHighlighting();
             }
             
             AddChatMessage(message, "user");
@@ -996,61 +1003,89 @@ namespace RoastMyCode
 
         private void AddChatMessage(string message, string role)
         {
-            ChatMessageBubble bubble = new ChatMessageBubble
+            // Detect if the message contains code
+            bool containsCode = message.Contains("```") || 
+                              (message.Contains("{") && message.Contains("}")) || 
+                              (message.Contains("def ") && message.Contains(":"));
+            
+            // Extract language from the message
+            string language = ExtractLanguageFromMessage(message);
+            
+            // Create appropriate bubble type based on content
+            Control bubble;
+            
+            if (containsCode && !string.IsNullOrEmpty(language))
             {
-                MessageText = message,
-                Role = role,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Font = _currentFont,
-                Margin = new Padding(10, 5, 10, 5)
-            };
+                // Use syntax highlighted bubble for code
+                SyntaxHighlightedChatBubble codeBubble = new SyntaxHighlightedChatBubble
+                {
+                    Message = message,
+                    Role = role,
+                    Language = language,
+                    Width = (int)(chatAreaPanel.Width * 0.70),
+                    MaximumSize = new Size((int)(chatAreaPanel.Width * 0.70), 0),
+                    Margin = new Padding(10),
+                    IsDarkMode = _isDarkMode
+                };
+                bubble = codeBubble;
+            }
+            else
+            {
+                // Use regular chat bubble for text
+                ChatMessageBubble textBubble = new ChatMessageBubble
+                {
+                    MessageText = message,
+                    Role = role,
+                    AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    Font = _currentFont,
+                    Margin = new Padding(10, 5, 10, 5)
+                };
+                bubble = textBubble;
+            }
 
             chatAreaPanel.Controls.Add(bubble);
             chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1);
 
-            if (role == "user")
+            if (role == "user" && !string.IsNullOrEmpty(language))
             {
-                // Try to extract language from the message
-                string language = ExtractLanguageFromMessage(message);
+                // Add language badge to chat message
+                LanguageBadge languageBadge = new LanguageBadge
+                {
+                    Language = language,
+                    Location = new Point(bubble.Left, bubble.Top - 20)
+                };
+                chatAreaPanel.Controls.Add(languageBadge);
+                chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2);
                 
-                // If we detected a language, update the UI
-                if (!string.IsNullOrEmpty(language))
+                // Update the language display in the corner
+                UpdateLanguageDisplay(language);
+                
+                // Update the input box language for better syntax highlighting on next input
+                rtInput.Language = language;
+                
+                Debug.WriteLine($"User message with language: {language}");
+            }
+            else if (role == "user" && message.Contains("{") && message.Contains("}") && message.Length > 20)
+            {
+                // If message contains code-like content but no specific language was detected
+                // Set a default language based on content patterns
+                if (message.Contains("public") || message.Contains("private") || message.Contains("class"))
                 {
-                    // Add language badge to chat message
-                    LanguageBadge languageBadge = new LanguageBadge
-                    {
-                        Language = language,
-                        Location = new Point(bubble.Left, bubble.Top - 20)
-                    };
-                    chatAreaPanel.Controls.Add(languageBadge);
-                    chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2);
-                    
-                    // Update the language display in the corner
-                    UpdateLanguageDisplay(language);
-                    
-                    Debug.WriteLine($"User message with language: {language}");
-                }
-                else if (message.Contains("{") && message.Contains("}") && message.Length > 20)
-                {
-                    // If message contains code-like content but no specific language was detected
-                    // Set a default language based on content patterns
-                    if (message.Contains("public") || message.Contains("private") || message.Contains("class"))
-                    {
-                        UpdateLanguageDisplay("C#");
-                        Debug.WriteLine("Set default language to C#");
-                    }
+                    UpdateLanguageDisplay("C#");
+                    rtInput.Language = "C#";
+                    Debug.WriteLine("Set default language to C#");
                 }
             }
-            else
+            else if (role != "user")
             {
                 // For non-user messages (AI or system)
-                string language = ExtractLanguageFromMessage(message);
-                if (!string.IsNullOrEmpty(language))
+                string detectedLanguage = ExtractLanguageFromMessage(message);
+                if (!string.IsNullOrEmpty(detectedLanguage))
                 {
                     // Update the language display in the corner
-                    UpdateLanguageDisplay(language);
-                    Debug.WriteLine($"Non-user message with language: {language}");
+                    UpdateLanguageDisplay(detectedLanguage);
+                    Debug.WriteLine($"Non-user message with language: {detectedLanguage}");
                 }
             }
 
@@ -1063,7 +1098,7 @@ namespace RoastMyCode
             string language = string.Empty;
             try
             {
-                // First try to match the file header format: === filename.ext (Language) ===
+                // Try to extract language from file header format: === filename.ext (Language) ===
                 var match = Regex.Match(message, @"===\s+.+\s+\(([^)]+)\)\s+===");
                 if (match.Success && match.Groups.Count > 1)
                 {
@@ -1078,6 +1113,38 @@ namespace RoastMyCode
                 {
                     language = codeBlockMatch.Groups[1].Value.Trim();
                     Debug.WriteLine($"Detected language from markdown code block: {language}");
+                    return language;
+                }
+                
+                // Try to extract language from file extension
+                match = Regex.Match(message, @"\.(cs|js|ts|py|java|cpp|c|php|rb|go|rs|swift|kt|dart|html|css|json|yaml|md)\b");
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    string ext = match.Groups[1].Value.ToLower();
+                    language = ext switch
+                    {
+                        "cs" => "C#",
+                        "js" => "JavaScript",
+                        "ts" => "TypeScript",
+                        "py" => "Python",
+                        "java" => "Java",
+                        "cpp" => "C++",
+                        "c" => "C",
+                        "php" => "PHP",
+                        "rb" => "Ruby",
+                        "go" => "Go",
+                        "rs" => "Rust",
+                        "swift" => "Swift",
+                        "kt" => "Kotlin",
+                        "dart" => "Dart",
+                        "html" => "HTML",
+                        "css" => "CSS",
+                        "json" => "JSON",
+                        "yaml" => "YAML",
+                        "md" => "Markdown",
+                        _ => "Unknown"
+                    };
+                    Debug.WriteLine($"Language detected from file extension: {language}");
                     return language;
                 }
                 
@@ -1101,7 +1168,7 @@ namespace RoastMyCode
                     Debug.WriteLine("Detected Python from code patterns");
                     return language;
                 }
-                else if (message.Contains("public static void main") || message.Contains("class ") && message.Contains("{"))
+                else if (message.Contains("public static void main") || (message.Contains("class ") && message.Contains("{")))
                 {
                     language = "Java";
                     Debug.WriteLine("Detected Java from code patterns");
