@@ -5,8 +5,9 @@ using System.Windows.Forms;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using AForge.Imaging.Filters;
-using AForge;
 using AForge.Imaging;
+using AForge;
+using System.Diagnostics;
 
 namespace RoastMyCode
 {
@@ -366,7 +367,7 @@ namespace RoastMyCode
         /// <summary>
         /// Disposes of webcam and animation resources
         /// </summary>
-        public void Dispose()
+        public new void Dispose()
         {
             StopWebcam();
             
@@ -435,24 +436,24 @@ namespace RoastMyCode
                     HSLFiltering hslFilter = new HSLFiltering();
                     
                     // Dynamic saturation based on animation intensity
-                    float saturationMin = 0.6f + (effectIntensity * 0.2f);
-                    float saturationMax = 0.8f + (effectIntensity * 0.2f);
-                    hslFilter.Saturation = new AForge.Range(saturationMin, saturationMax);
+                    hslFilter.Saturation = new AForge.Range(0.6f + effectIntensity * 0.3f, 0.9f + effectIntensity * 0.1f);
                     
                     // Dynamic hue shift based on animation
                     if (_isAnimating)
                     {
-                        hslFilter.Hue = new AForge.Range(-0.1f * effectIntensity, 0.1f * effectIntensity);
+                        // Apply hue shift by modifying saturation and luminance instead
+                        hslFilter.Saturation = new AForge.Range(0.6f + effectIntensity * 0.3f, 0.9f + effectIntensity * 0.1f);
+                        hslFilter.Luminance = new AForge.Range(0.5f - effectIntensity * 0.1f, 0.9f);
                     }
                     
                     processedFrame = hslFilter.Apply(processedFrame);
                     
                     // Add some color distortion with animation
-                    ChannelFiltering channelFilter = new ChannelFiltering();
-                    channelFilter.Red = new IntRange((int)(100 * (1.0f - effectIntensity * 0.3f)), 255);
-                    channelFilter.Green = new IntRange(0, (int)(200 * (1.0f + effectIntensity * 0.2f)));
-                    channelFilter.Blue = new IntRange(0, (int)(200 * (1.0f - effectIntensity * 0.3f)));
-                    processedFrame = channelFilter.Apply(processedFrame);
+                    ChannelFiltering colorFilter = new ChannelFiltering();
+                    colorFilter.Red = new IntRange((int)(100 * (1.0f - effectIntensity * 0.3f)), 255);
+                    colorFilter.Green = new IntRange(0, (int)(200 * (1.0f + effectIntensity * 0.2f)));
+                    colorFilter.Blue = new IntRange(0, (int)(200 * (1.0f - effectIntensity * 0.3f)));
+                    processedFrame = colorFilter.Apply(processedFrame);
                     break;
                     
                 case "Pixelate":

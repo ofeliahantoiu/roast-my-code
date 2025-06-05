@@ -1160,41 +1160,7 @@ namespace RoastMyCode
             }
         }
 
-        /// <summary>
-        /// Synchronizes webcam effects with roast content based on severity
-        /// </summary>
-        private void SyncWebcamWithRoast(string roastContent)
-        {
-            if (_webcamControl == null || !_webcamControl.IsWebcamActive || !_webcamControl.Visible)
-                return;
-            
-            // Determine roast severity based on content
-            int severity = DetermineRoastSeverity(roastContent);
-            
-            // Select effect based on severity
-            string effect = "None";
-            switch (severity)
-            {
-                case 1:
-                    effect = "Sepia"; // Mild effect for light roasts
-                    break;
-                case 2:
-                    effect = "Grayscale"; // Moderate effect
-                    break;
-                case 3:
-                    effect = "Pixelate"; // Medium effect
-                    break;
-                case 4:
-                    effect = "Invert"; // Strong effect
-                    break;
-                case 5:
-                    effect = "Clown"; // Most intense effect for savage roasts
-                    break;
-            }
-            
-            // Start animated effect with determined severity
-            _webcamControl.StartAnimatedEffect(severity, effect);
-        }
+        // This method was duplicated and has been removed
         
         /// <summary>
         /// Analyzes roast content to determine severity on a scale of 1-5
@@ -1337,8 +1303,25 @@ namespace RoastMyCode
             // Extract language from the message
             string language = ExtractLanguageFromMessage(message);
             
-            // Create appropriate bubble type based on content
+            // Create appropriate bubble type based on content and role
             Control bubble;
+            bool useAnimation = role == "assistant"; // Only animate assistant messages
+            string animationType = "FadeIn";
+            
+            // Determine animation type based on message content
+            if (role == "assistant")
+            {
+                // Use different animation types based on message content or roast severity
+                if (message.Contains("terrible") || message.Contains("awful") || 
+                    message.Contains("worst") || message.Contains("garbage"))
+                {
+                    animationType = "SlideIn"; // More dramatic for severe roasts
+                }
+                else if (message.Length > 200)
+                {
+                    animationType = "GrowIn"; // For longer messages
+                }
+            }
             
             if (containsCode && !string.IsNullOrEmpty(language))
             {
@@ -1354,6 +1337,23 @@ namespace RoastMyCode
                     IsDarkMode = _isDarkMode
                 };
                 bubble = codeBubble;
+            }
+            else if (useAnimation)
+            {
+                // Use animated chat bubble for assistant messages
+                AnimatedChatBubble animatedBubble = new AnimatedChatBubble
+                {
+                    MessageText = message,
+                    Role = role,
+                    AnimationType = animationType,
+                    AnimationDuration = 800, // Longer duration for more visible effect
+                    AutoSize = true,
+                    Width = (int)(chatAreaPanel.Width * 0.70),
+                    Font = _currentFont,
+                    Margin = new Padding(10, 5, 10, 5),
+                    IsDarkMode = _isDarkMode
+                };
+                bubble = animatedBubble;
             }
             else
             {
@@ -1417,6 +1417,12 @@ namespace RoastMyCode
 
             PositionChatBubbles();
             chatAreaPanel.ScrollControlIntoView(bubble);
+            
+            // Start animation for animated bubbles
+            if (bubble is AnimatedChatBubble bubbleToAnimate)
+            {
+                bubbleToAnimate.StartAnimation();
+            }
         }
 
         private string ExtractLanguageFromMessage(string message)
@@ -2051,7 +2057,6 @@ namespace RoastMyCode
                                     if (!_uploadedFiles.ContainsKey(displayName))
                                     {
                                         _uploadedFiles[displayName] = content;
-                                        fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                     }
                                     _uploadedFiles[displayName] = content;
                                     fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
@@ -2067,149 +2072,26 @@ namespace RoastMyCode
                         {
                             string combinedContent = string.Join("\n\n", fileContents);
                             AddChatMessage(combinedContent, "user");
+                            _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
                             
-                            // Store the last detected language for updating the display
-                            lastDetectedLanguage = language;
-                            
-                            if (!_uploadedFiles.ContainsKey(displayName))
+                            // Update the language display with the last detected language
+                            if (!string.IsNullOrEmpty(lastDetectedLanguage))
                             {
-                                _uploadedFiles[displayName] = content;
-                                fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
+                                UpdateLanguageDisplay(lastDetectedLanguage);
                             }
-                            _uploadedFiles[displayName] = content;
-                            fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
+                            
+                            if (_uploadedFiles.Count > 0)
+                            {
+                                ShowDownloadButton();
+                            }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        fileContents.Add($"Error processing {Path.GetFileName(fileName)}: {ex.Message}");
-                    }
-                }
-
-                if (fileContents.Count > 0)
-                {
-                    string combinedContent = string.Join("\n\n", fileContents);
-                    AddChatMessage(combinedContent, "user");
-                    _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
-                    
-                    // Update the language display with the last detected language
-                    if (!string.IsNullOrEmpty(lastDetectedLanguage))
-                    {
-                        UpdateLanguageDisplay(lastDetectedLanguage);
-                    }
-                    
-                    if (_uploadedFiles.Count > 0)
-                    {
-                        ShowDownloadButton();
-                    }
-                }
-        private Color borderColor = Color.Transparent;
-        private int borderWidth = 0;
-
-        public int CornerRadius
-        {
-            get => cornerRadius;
-            set
-            {
-                cornerRadius = value;
-                Invalidate();
-            }
-        }
-
-        public Color BorderColor
-        {
-            get => borderColor;
-            set
-            {
-                borderColor = value;
-                Invalidate();
-            }
-        }
-
-        public int BorderWidth
-        {
-            get => borderWidth;
-            set
-            {
-                borderWidth = value;
-                Invalidate();
-            }
-        }
-
-        public RoundedRichTextBox()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-                int radius = CornerRadius;
-                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
-                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
-                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
-                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
-                path.CloseAllFigures();
-
-                this.Region = new Region(path);
-
-                if (borderWidth > 0)
-                {
-                    using (Pen pen = new Pen(BorderColor, BorderWidth))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
                 }
             }
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            Invalidate();
-        }
-
-        public class RoundedPanel : Panel
-        {
-            public int CornerRadius { get; set; } = 18;
-            public Color BorderColor { get; set; } = Color.Gray;
-            public int BorderWidth { get; set; } = 1;
-
-            public RoundedPanel()
+            catch (Exception ex)
             {
-                this.SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-                this.BackColor = Color.White;
-            }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                base.OnPaint(e);
-                var rect = new Rectangle(0, 0, Width - 1, Height - 1);
-                using (var path = GetRoundedRect(rect, CornerRadius))
-                using (var brush = new SolidBrush(this.BackColor))
-                using (var pen = new Pen(BorderColor, BorderWidth))
-                {
-                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    e.Graphics.FillPath(brush, path);
-                    e.Graphics.DrawPath(pen, path);
-                }
-            }
-
-            private GraphicsPath GetRoundedRect(Rectangle rect, int radius)
-            {
-                var path = new GraphicsPath();
-                int d = radius * 2;
-                path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-                path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-                path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-                path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-                path.CloseFigure();
-                return path;
+                AddChatMessage($"Error processing files: {ex.Message}", "system");
             }
         }
     }
-}   
+}
