@@ -28,6 +28,8 @@ namespace RoastMyCode
         private string[] _codeExtensions = Array.Empty<string>(); 
         private long _currentTotalSizeBytes = 0;
         private WebcamControl? _webcamControl; 
+        private VoiceOutputManager? _voiceOutputManager;
+        private bool _voiceOutputEnabled = false;
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
