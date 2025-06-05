@@ -897,6 +897,15 @@ namespace RoastMyCode
 
         private void LoadImageFromAssets(PictureBox pictureBox, string imageName)
         {
+            // Check if we need to create an active camera icon dynamically
+            if (imageName == "camera_active_light.png" || imageName == "camera_active_dark.png")
+            {
+                string baseIconName = imageName == "camera_active_light.png" ? "cameralight.png" : "cameradark.png";
+                CreateActiveIcon(pictureBox, baseIconName);
+                return;
+            }
+            
+            // Regular image loading
             string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
             string assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
             string projectDirectory = Directory.GetParent(assemblyDirectory!)!.Parent!.Parent!.FullName; 
@@ -907,8 +916,8 @@ namespace RoastMyCode
                 try
                 {
                     pictureBox.Image = Image.FromFile(assetsPath);
-                     this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
-                     System.Diagnostics.Debug.WriteLine($"Successfully loaded image: {assetsPath}");
+                    this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
+                    System.Diagnostics.Debug.WriteLine($"Successfully loaded image: {assetsPath}");
                 }
                 catch (Exception ex)
                 {
@@ -920,6 +929,52 @@ namespace RoastMyCode
             {
                 System.Diagnostics.Debug.WriteLine($"Image file not found at: {assetsPath}");
                 MessageBox.Show($"Image file not found at: {assetsPath}", "Image Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Creates an active camera icon by adding a red indicator to the base icon
+        /// </summary>
+        private void CreateActiveIcon(PictureBox pictureBox, string baseIconName)
+        {
+            try
+            {
+                string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
+                string projectDirectory = Directory.GetParent(assemblyDirectory!)!.Parent!.Parent!.FullName; 
+                string assetsPath = Path.Combine(projectDirectory, "assets", baseIconName);
+                
+                if (File.Exists(assetsPath))
+                {
+                    using (Bitmap baseIcon = new Bitmap(Image.FromFile(assetsPath)))
+                    {
+                        // Create a copy of the base icon
+                        Bitmap activeIcon = new Bitmap(baseIcon.Width, baseIcon.Height);
+                        
+                        // Draw the base icon and add a red dot indicator
+                        using (Graphics g = Graphics.FromImage(activeIcon))
+                        {
+                            g.DrawImage(baseIcon, 0, 0);
+                            g.FillEllipse(Brushes.Red, baseIcon.Width - 8, 0, 8, 8);
+                        }
+                        
+                        // Set the modified icon
+                        if (pictureBox.Image != null)
+                        {
+                            pictureBox.Image.Dispose();
+                        }
+                        pictureBox.Image = activeIcon;
+                        this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Base icon not found at: {assetsPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error creating active icon from {baseIconName}: {ex.Message}");
             }
         }
 
@@ -1909,32 +1964,42 @@ namespace RoastMyCode
                         {
                             string combinedContent = string.Join("\n\n", fileContents);
                             AddChatMessage(combinedContent, "user");
-                            _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
                             
-                            // Update the language display with the last detected language
-                            if (!string.IsNullOrEmpty(lastDetectedLanguage))
-                            {
-                                UpdateLanguageDisplay(lastDetectedLanguage);
-                            }
+                            // Store the last detected language for updating the display
+                            lastDetectedLanguage = language;
                             
-                            if (_uploadedFiles.Count > 0)
+                            if (!_uploadedFiles.ContainsKey(displayName))
                             {
-                                ShowDownloadButton();
+                                _uploadedFiles[displayName] = content;
+                                fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                             }
+                            _uploadedFiles[displayName] = content;
+                            fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        fileContents.Add($"Error processing {Path.GetFileName(fileName)}: {ex.Message}");
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                AddChatMessage($"Error during file upload: {ex.Message}", "system");
-            }
-        }
 
-    }   
-    public class RoundedRichTextBox : RichTextBox
-    {
-        private int cornerRadius = 20;
+                if (fileContents.Count > 0)
+                {
+                    string combinedContent = string.Join("\n\n", fileContents);
+                    AddChatMessage(combinedContent, "user");
+                    _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
+                    
+                    // Update the language display with the last detected language
+                    if (!string.IsNullOrEmpty(lastDetectedLanguage))
+                    {
+                        UpdateLanguageDisplay(lastDetectedLanguage);
+                    }
+                    
+                    if (_uploadedFiles.Count > 0)
+                    {
+                        ShowDownloadButton();
+                    }
+                }
         private Color borderColor = Color.Transparent;
         private int borderWidth = 0;
 
