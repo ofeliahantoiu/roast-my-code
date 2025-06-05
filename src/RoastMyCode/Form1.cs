@@ -9,12 +9,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Diagnostics;
-using System.Speech.Synthesis;
-using System;
 using RoastMyCode.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
+using System.Speech.Synthesis;
 
 namespace RoastMyCode
 {
@@ -26,15 +25,10 @@ namespace RoastMyCode
         private readonly FileUploadOptions _fileUploadOptions;
         private bool _isDarkMode = true;
         private Font _currentFont = new Font("Segoe UI", 10);
-        private readonly SpeechSynthesizer _speechSynthesizer = new SpeechSynthesizer();
-        private const int MIC_ICON_SIZE = 24;
-        private const int MIC_ICON_MARGIN_X = 1;  // Horizontal margin from bubble edge
-        private const int MIC_ICON_MARGIN_Y = 10;  // Vertical margin from bubble top/bottom
-        private const string MIC_ICON_DARK = "assets/microphonedark.png";
-        private const string MIC_ICON_LIGHT = "assets/microphonelight.png";
         private Dictionary<string, string> _uploadedFiles = new Dictionary<string, string>();   
         private string[] _codeExtensions = Array.Empty<string>(); 
         private long _currentTotalSizeBytes = 0; 
+        private readonly SpeechSynthesizer _speechSynthesizer = new SpeechSynthesizer();
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
@@ -88,41 +82,6 @@ namespace RoastMyCode
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
 
-        private void SpeakMessage()
-        {
-            try
-            {
-                // Find the last AI message bubble
-                ChatMessageBubble? lastAIBubble = null;
-                foreach (Control control in chatAreaPanel.Controls)
-                {
-                    if (control is ChatMessageBubble bubble && bubble.Role == "assistant")
-                    {
-                        lastAIBubble = bubble;
-                    }
-                }
-
-                if (lastAIBubble != null)
-                {
-                    using (var synth = new SpeechSynthesizer())
-                    {
-                        synth.SelectVoiceByHints(VoiceGender.Neutral);
-                        synth.Volume = 100;
-                        synth.Rate = 0;
-                        synth.Speak(lastAIBubble.MessageText);
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("No AI messages to read.", "No Messages", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error speaking message: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
 
         public Form1(IConfiguration configuration, IServiceProvider serviceProvider)
         {
@@ -142,7 +101,9 @@ namespace RoastMyCode
                 
                 if (_fileUploadOptions.AllowedExtensions == null || _fileUploadOptions.AllowedExtensions.Length == 0)
                 {
-                    _fileUploadOptions.AllowedExtensions = new string[] { ".cs", ".js", ".py", ".css" }; 
+                    _fileUploadOptions.AllowedExtensions = _languageMap.Keys
+                        .Where(ext => ext.StartsWith("."))
+                        .ToArray();
                 }
                 
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
@@ -470,7 +431,7 @@ namespace RoastMyCode
 
             cmbFontSize.DrawMode = DrawMode.OwnerDrawFixed;
             cmbFontSize.DrawItem += (sender, e) => {
-                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48))) // Dark background
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48))) 
                 {
                     e.Graphics.FillRectangle(brush, e.Bounds);
                 }
@@ -653,7 +614,7 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
-            pbMicIcon.Click += (s, e) => SpeakMessage();
+            pbMicIcon.Click += (s, e) => SpeakMessage();    
 
             leftIconsPanel.Controls.Add(pbUploadIcon);
             leftIconsPanel.Controls.Add(pbCameraIcon);
@@ -673,19 +634,6 @@ namespace RoastMyCode
                 Padding = new Padding(10, 5, 10, 5),
                 Location = new Point(110, 5),
                 Text = "Type your message here..."
-            };
-            
-            // Add Enter key functionality
-            rtInput.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter && !e.Shift)
-                {
-                    e.SuppressKeyPress = true;
-                    if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
-                    {
-                        SendMessage();
-                    }
-                }
             };
 
             rtInput.GotFocus += (s, e) => {
@@ -807,6 +755,37 @@ namespace RoastMyCode
             {
                 pbGradientBackground.Height = this.ClientSize.Height / 2;
                 pbGradientBackground.SendToBack();
+            }
+        }
+
+        private void SpeakMessage()
+        {
+            try
+            {
+                ChatMessageBubble? lastAIBubble = null;
+                foreach (Control control in chatAreaPanel.Controls)
+                {
+                    if (control is ChatMessageBubble bubble && bubble.Role == "assistant")
+                    {
+                        lastAIBubble = bubble;
+                    }
+                }
+
+                if (lastAIBubble != null)
+                {
+                    _speechSynthesizer.SelectVoiceByHints(VoiceGender.Neutral);
+                    _speechSynthesizer.Volume = 100;
+                    _speechSynthesizer.Rate = 0;
+                    _speechSynthesizer.SpeakAsync(lastAIBubble.MessageText);
+                }
+                else
+                {
+                    MessageBox.Show("No AI messages to read.", "No Messages", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error speaking message: {ex.Message}", "TTS Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -1010,35 +989,38 @@ namespace RoastMyCode
             rtInput.ForeColor = Color.FromArgb(150, 150, 150);
             rtInput.SelectionStart = 0;
 
-            // Add a test AI message with TTS
-            string testMessage = "AI: Your code looks like it was written by a sleep-deprived raccoon.";
-            AddChatMessage(testMessage, "assistant");
-            _conversationHistory.Add(new ChatMessage { Content = testMessage, Role = "assistant" });
-
             if (chatAreaPanel.VerticalScroll.Visible)
                 chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
         }
 
         private void AddChatMessage(string message, string role)
         {
-            // Create the main message bubble
             ChatMessageBubble bubble = new ChatMessageBubble
             {
+                MessageText = message,
+                Role = role,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Font = _currentFont,
                 Margin = new Padding(10, 5, 10, 5)
             };
-            bubble.SetMessage(message, role);
-
-            chatAreaPanel.Invalidate();
 
             chatAreaPanel.Controls.Add(bubble);
-            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1);
+            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
             PositionChatBubbles();
+
             chatAreaPanel.ScrollControlIntoView(bubble);
         }
 
+        private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
+        {
+            if (e.Control is ChatMessageBubble bubble)
+            {
+                PositionChatBubbles();
+                chatAreaPanel.ScrollControlIntoView(bubble);
+            }
+        }
+            
         private void PositionChatBubbles()
         {
             int panelWidth = chatAreaPanel.ClientSize.Width;
@@ -1096,7 +1078,6 @@ namespace RoastMyCode
             _isDarkMode = !_isDarkMode;
             ApplyTheme();
             UpdateThemeIcon();
-            
             if (pbSendIcon != null) LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
             if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
             if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
@@ -1451,7 +1432,7 @@ namespace RoastMyCode
             return errors.Count == 0;
         }
 
-        private void PbCameraIcon_Click(object? sender, EventArgs e)
+        private async void PbCameraIcon_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -1521,8 +1502,6 @@ namespace RoastMyCode
                                         _uploadedFiles[displayName] = content;
                                         fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                     }
-                                _uploadedFiles[displayName] = content;
-                                fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                 }
                             }
                             catch (Exception ex)
@@ -1540,6 +1519,11 @@ namespace RoastMyCode
                             if (_uploadedFiles.Count > 0)
                             {
                                 ShowDownloadButton();
+                                
+                                // Trigger AI response
+                                string aiResponse = await _aiService.ProcessFiles(_uploadedFiles, cmbRoastLevel.SelectedItem?.ToString() ?? "light");
+                                AddChatMessage(aiResponse, "assistant");
+                                _conversationHistory.Add(new ChatMessage { Content = aiResponse, Role = "assistant" });
                             }
                         }
                     }

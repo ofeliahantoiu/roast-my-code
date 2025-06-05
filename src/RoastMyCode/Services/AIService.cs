@@ -17,6 +17,97 @@ namespace RoastMyCode.Services
         private readonly string _apiKey;
         private readonly string _modelName;
 
+        public async Task<string> ProcessFiles(Dictionary<string, string> files, string roastLevel)
+        {
+            try
+            {
+                string toneInstruction = roastLevel.ToLower() switch
+                {
+                    "light" => "Be gentle and constructive, like a friendly mentor pointing out issues with a smile.",
+                    "savage" => "Be more direct and witty, like a senior developer who's seen it all and isn't afraid to call out bad practices.",
+                    "brutal" => "Be merciless and sarcastic, like a code reviewer who's had one too many cups of coffee and zero patience.",
+                    _ => "Be constructive but humorous."
+                };
+
+                var messages = new List<object>
+                {
+                    new { role = "system", content = $@"You are a code reviewer with a sense of humor. Your job is to roast code and respond to questions in a funny but informative way. 
+                    {toneInstruction}
+                    Rules:
+                    1. Keep responses concise but maintain the {roastLevel.ToLower()} tone.
+                    2. When reviewing code, focus on the most critical or unique issues.
+                    3. Make it funny, creative, and specific to the code.
+                    4. Avoid generic or repetitive intros.
+                    5. You can engage in conversation while maintaining your roasting personality.
+                    6. If asked about your behavior, explain that you're a code roasting AI designed to be brutally honest.
+                    7. ALWAYS analyze the code that is provided - don't just ask for code.
+                    8. Point out specific issues in the code with line numbers or specific sections.
+                    9. Make jokes about the code style, patterns, or specific implementation choices.
+                    10. If the code is actually good, roast it anyway but in a way that acknowledges its quality." }
+                };
+
+                // Prepare the file contents for analysis
+                string fileContent = "";
+                foreach (var file in files)
+                {
+                    fileContent += $"=== {file.Key} ===\n{file.Value}\n\n";
+                }
+
+                messages.Add(new { role = "user", content = $"Please analyze the following code files:\n\n{fileContent}" });
+
+                var requestBody = new
+                {
+                    model = _modelName,
+                    messages = messages,
+                    max_tokens = 500,
+                    temperature = 0.7
+                };
+
+                var content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        return "Sorry, we've hit the API rate limit. Please wait a few minutes before trying again.";
+                    }
+                    MessageBox.Show($"API Error: {responseContent}\nStatus Code: {response.StatusCode}", "API Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return $"Error: {responseContent}";
+                }
+
+                try
+                {
+                    var responseObject = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                    if (responseObject.TryGetProperty("choices", out var choices) &&
+                        choices.GetArrayLength() > 0 &&
+                        choices[0].TryGetProperty("message", out var message) &&
+                        message.TryGetProperty("content", out var contentProp))
+                    {
+                        return contentProp.GetString() ?? "No response generated from the API.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error processing response: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return $"Error processing response: {ex.Message}";
+                }
+
+                return "Sorry, I couldn't process the files. Please try again.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error analyzing files: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return $"Error analyzing files: {ex.Message}";
+            }
+        }
+
         public AIService(IConfiguration configuration)
         {
             _apiKey = configuration["OpenAI:ApiKey"] 

@@ -2,7 +2,6 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using System.IO;
 
 namespace RoastMyCode
 {
@@ -31,8 +30,6 @@ namespace RoastMyCode
             }
         }
 
-
-
         public ChatMessageBubble()
         {
             InitializeComponent();
@@ -54,13 +51,6 @@ namespace RoastMyCode
             this.SuspendLayout();
             this.Name = "ChatMessageBubble";
             this.ResumeLayout(false);
-        }
-
-        public void SetMessage(string message, string role)
-        {
-            _messageText = message;
-            _role = role;
-            Invalidate();
         }
 
         protected override void OnLayout(LayoutEventArgs levent)
@@ -109,45 +99,37 @@ namespace RoastMyCode
             int cornerRadius = 12;
 
             Rectangle bubbleBounds = new Rectangle(0, 0, this.Width, this.Height);
-            using (GraphicsPath path = GetRoundedRect(bubbleBounds, cornerRadius))
+
+            using (GraphicsPath path = new GraphicsPath())
             {
-                using (Brush brush = new SolidBrush(backColor))
+                int diameter = cornerRadius * 2;
+                Rectangle arc = new Rectangle(bubbleBounds.X, bubbleBounds.Y, diameter, diameter);
+
+                path.AddArc(arc, 180, 90); 
+                arc.X = bubbleBounds.Right - diameter;
+                path.AddArc(arc, 270, 90); 
+                arc.Y = bubbleBounds.Bottom - diameter;
+                path.AddArc(arc, 0, 90); 
+                arc.X = bubbleBounds.X;
+                path.AddArc(arc, 90, 90); 
+                path.CloseFigure();
+
+                using (SolidBrush brush = new SolidBrush(backColor))
                 {
                     g.FillPath(brush, path);
                 }
-                using (Pen pen = new Pen(Color.FromArgb(100, 100, 100)))
-                {
-                    g.DrawPath(pen, path);
-                }
             }
 
-            TextFormatFlags flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
-            if (_role == "user")
-            {
-                flags |= TextFormatFlags.Right;
-            }
-            TextRenderer.DrawText(e.Graphics, _messageText, Font, bubbleBounds, textColor, flags);
-        }
+            Rectangle textRect = new Rectangle(
+                Padding.Left,
+                Padding.Top,
+                this.Width - Padding.Horizontal,
+                this.Height - Padding.Vertical
+            );
 
-        private GraphicsPath GetRoundedRect(Rectangle bounds, int radius)
-        {
-            var path = new GraphicsPath();
-            int diameter = radius * 2;
+            TextFormatFlags textFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.VerticalCenter;
             
-            // Top-left corner
-            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
-            
-            // Top-right corner
-            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
-            
-            // Bottom-right corner
-            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
-            
-            // Bottom-left corner
-            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
-            
-            path.CloseFigure();
-            return path;
+            TextRenderer.DrawText(g, _messageText, Font, textRect, Color.White, textFlags);
         }
     }
 }

@@ -5,6 +5,7 @@ namespace RoastMyCode.Services
     public interface IAIService
     {
         Task<string> GenerateRoast(string prompt, string roastLevel, List<ChatMessage> conversationHistory);
+        Task<string> ProcessFiles(Dictionary<string, string> files, string roastLevel);
     }
 }
 
