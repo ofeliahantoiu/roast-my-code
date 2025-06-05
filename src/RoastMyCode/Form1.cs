@@ -80,7 +80,8 @@ namespace RoastMyCode
         private SyntaxHighlightingTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
         private PictureBox? pbMicIcon;
-        private PictureBox? pbUploadIcon = null!;
+        private PictureBox? pbUploadIcon;
+        private PictureBox? pbVoiceIcon;
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
@@ -110,6 +111,7 @@ namespace RoastMyCode
                 
                 InitializeComponent();
                 InitializeWebcam();
+                InitializeVoiceOutput();
                 InitializeModernUI();
                 ApplyTheme();
 
@@ -223,6 +225,54 @@ namespace RoastMyCode
                 {
                     LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Initializes the voice output functionality
+        /// </summary>
+        private void InitializeVoiceOutput()
+        {
+            try
+            {
+                // Initialize the voice output manager
+                _voiceOutputManager = new VoiceOutputManager();
+                _voiceOutputEnabled = false;
+                
+                Debug.WriteLine($"Voice output initialized with {_voiceOutputManager.AvailableVoices.Count} available voices");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error initializing voice output: {ex.Message}");
+                // Voice output is optional, so we can continue without it
+            }
+        }
+        
+        /// <summary>
+        /// Toggles voice output on/off
+        /// </summary>
+        private void ToggleVoiceOutput_Click(object? sender, EventArgs e)
+        {
+            if (_voiceOutputManager == null) return;
+            
+            _voiceOutputEnabled = !_voiceOutputEnabled;
+            
+            // Update voice icon
+            if (pbVoiceIcon != null)
+            {
+                LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
+                    (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
+                    (_isDarkMode ? "voicelight.png" : "voicedark.png"));
+            }
+            
+            // Provide feedback
+            string message = _voiceOutputEnabled ? "Voice output enabled" : "Voice output disabled";
+            Debug.WriteLine(message);
+            
+            // Stop any current speech if disabling
+            if (!_voiceOutputEnabled && _voiceOutputManager != null)
+            {
+                _voiceOutputManager.StopSpeaking();
             }
         }
         
@@ -761,7 +811,11 @@ namespace RoastMyCode
                 Location = new Point(10, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
-            LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
+            if (pbUploadIcon != null)
+            {
+                LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
+            }
+            
             pbUploadIcon.Click += PbCameraIcon_Click;
 
             pbCameraIcon = new PictureBox
@@ -787,11 +841,29 @@ namespace RoastMyCode
                 Location = new Point(70, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
-            LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
+            
+            pbVoiceIcon = new PictureBox
+            {
+                Size = new Size(26, 26),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Location = new Point(100, (inputPanelHeight - 26) / 2),
+                Visible = true
+            };
+            if (pbVoiceIcon != null)
+            {
+                LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
+                    (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
+                    (_isDarkMode ? "voicelight.png" : "voicedark.png"));
+            }
+            pbVoiceIcon.Click += ToggleVoiceOutput_Click;
 
             leftIconsPanel.Controls.Add(pbUploadIcon);
             leftIconsPanel.Controls.Add(pbCameraIcon);
             leftIconsPanel.Controls.Add(pbMicIcon);
+            leftIconsPanel.Controls.Add(pbVoiceIcon);
             leftIconsPanel.BringToFront();
             
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
@@ -1104,6 +1176,12 @@ namespace RoastMyCode
              else if (control is PictureBox pb)
             {
                 pb.BackColor = backColor;
+                if (pb == pbVoiceIcon)
+                {
+                    LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
+                        (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
+                        (_isDarkMode ? "voicelight.png" : "voicedark.png"));
+                }
             }
             foreach (Control child in control.Controls)
             {
@@ -1309,6 +1387,17 @@ namespace RoastMyCode
             Control bubble;
             bool useAnimation = role == "assistant"; // Only animate assistant messages
             string animationType = "FadeIn";
+            
+            // Use voice output for assistant messages if enabled
+            if (role == "assistant" && _voiceOutputEnabled && _voiceOutputManager != null)
+            {
+                // Extract text content without code blocks for speech
+                string speechText = ExtractTextForSpeech(message);
+                if (!string.IsNullOrEmpty(speechText))
+                {
+                    _voiceOutputManager.SpeakAsync(speechText);
+                }
+            }
             
             // Determine animation type based on message content
             if (role == "assistant")
