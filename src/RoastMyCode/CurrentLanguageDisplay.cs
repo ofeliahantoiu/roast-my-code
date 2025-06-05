@@ -11,6 +11,7 @@ namespace RoastMyCode
     public class CurrentLanguageDisplay : UserControl
     {
         private string _language = "None";
+        private string _previousLanguage = "None";
         private readonly int _cornerRadius = 8; // Reduced corner radius for modern look
         private bool _isDarkMode = true;
         private bool _isAnimating = false;
@@ -87,6 +88,8 @@ namespace RoastMyCode
         /// </summary>
         public void AnimateLanguageChange()
         {
+            // Store the previous language before starting animation
+            _previousLanguage = _language;
             _isAnimating = true;
             _animationProgress = 0;
             _animationTimer.Start();
@@ -103,16 +106,35 @@ namespace RoastMyCode
             Color backColor = _isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
             Color textColor = _isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
             Color borderColor = _isDarkMode ? ThemeManager.DarkTheme.Border : ThemeManager.LightTheme.Border;
-            Color accentColor = GetLanguageColor(_language);
+            
+            // Get accent colors for current and previous language
+            Color currentAccentColor = GetLanguageColor(_language);
+            Color previousAccentColor = GetLanguageColor(_previousLanguage);
+            
+            // Create a transition between previous and current accent colors if animating
+            Color accentColor;
+            if (_isAnimating && _previousLanguage != _language)
+            {
+                // Blend the colors based on animation progress
+                accentColor = BlendColors(previousAccentColor, currentAccentColor, _animationProgress);
+            }
+            else
+            {
+                accentColor = currentAccentColor;
+            }
 
             // Apply animation effect if active
             float scale = 1.0f;
             float opacity = 1.0f;
             if (_isAnimating)
             {
-                // Ease-out animation
+                // Ease-out animation with more pronounced scale effect
                 float progress = (float)Math.Pow(_animationProgress, 0.5);
-                scale = 0.95f + (0.05f * progress);
+                
+                // More noticeable scale animation: start smaller and grow to normal size
+                scale = 0.90f + (0.10f * progress);
+                
+                // Opacity animation to fade in
                 opacity = progress;
             }
 
@@ -251,9 +273,35 @@ namespace RoastMyCode
 
         private Color GetTextColorForBackground(Color backgroundColor)
         {
-            // Calculate luminance to determine if text should be black or white
-            double luminance = (0.299 * backgroundColor.R + 0.587 * backgroundColor.G + 0.114 * backgroundColor.B) / 255;
-            return luminance > 0.5 ? Color.Black : Color.White;
+            // Calculate the perceived brightness of the background color
+            double brightness = (backgroundColor.R * 0.299 + backgroundColor.G * 0.587 + backgroundColor.B * 0.114) / 255;
+            
+            // Return white for dark backgrounds and black for light backgrounds
+            return brightness < 0.6 ? Color.White : Color.Black;
+        }
+
+        /// <summary>
+        /// Blends two colors based on the specified blend factor (0.0 to 1.0)
+        /// </summary>
+        /// <param name="color1">Starting color</param>
+        /// <param name="color2">Ending color</param>
+        /// <param name="blendFactor">Blend factor (0.0 = color1, 1.0 = color2)</param>
+        /// <returns>Blended color</returns>
+        private Color BlendColors(Color color1, Color color2, float blendFactor)
+        {
+            // Ensure blend factor is between 0 and 1
+            blendFactor = Math.Max(0, Math.Min(1, blendFactor));
+            
+            // Use a smooth easing function for more natural color transition
+            blendFactor = (float)Math.Pow(blendFactor, 0.7); // Slightly ease-in for smoother color transition
+            
+            // Calculate the blended color components
+            int r = (int)Math.Round(color1.R + (color2.R - color1.R) * blendFactor);
+            int g = (int)Math.Round(color1.G + (color2.G - color1.G) * blendFactor);
+            int b = (int)Math.Round(color1.B + (color2.B - color1.B) * blendFactor);
+            int a = (int)Math.Round(color1.A + (color2.A - color1.A) * blendFactor);
+            
+            return Color.FromArgb(a, r, g, b);
         }
     }
 }
