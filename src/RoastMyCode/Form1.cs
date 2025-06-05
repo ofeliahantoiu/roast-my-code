@@ -1160,6 +1160,109 @@ namespace RoastMyCode
             }
         }
 
+        /// <summary>
+        /// Synchronizes webcam effects with roast content based on severity
+        /// </summary>
+        private void SyncWebcamWithRoast(string roastContent)
+        {
+            if (_webcamControl == null || !_webcamControl.IsWebcamActive || !_webcamControl.Visible)
+                return;
+            
+            // Determine roast severity based on content
+            int severity = DetermineRoastSeverity(roastContent);
+            
+            // Select effect based on severity
+            string effect = "None";
+            switch (severity)
+            {
+                case 1:
+                    effect = "Sepia"; // Mild effect for light roasts
+                    break;
+                case 2:
+                    effect = "Grayscale"; // Moderate effect
+                    break;
+                case 3:
+                    effect = "Pixelate"; // Medium effect
+                    break;
+                case 4:
+                    effect = "Invert"; // Strong effect
+                    break;
+                case 5:
+                    effect = "Clown"; // Most intense effect for savage roasts
+                    break;
+            }
+            
+            // Start animated effect with determined severity
+            _webcamControl.StartAnimatedEffect(severity, effect);
+        }
+        
+        /// <summary>
+        /// Analyzes roast content to determine severity on a scale of 1-5
+        /// </summary>
+        private int DetermineRoastSeverity(string roastContent)
+        {
+            // Default to medium severity
+            int severity = 3;
+            
+            // Check for selected roast level in combo box
+            if (cmbRoastLevel.SelectedIndex > 0)
+            {
+                string? selectedLevel = cmbRoastLevel.SelectedItem?.ToString();
+                switch (selectedLevel)
+                {
+                    case "Mild":
+                        severity = 1;
+                        break;
+                    case "Medium":
+                        severity = 2;
+                        break;
+                    case "Spicy":
+                        severity = 3;
+                        break;
+                    case "Hot":
+                        severity = 4;
+                        break;
+                    case "Savage":
+                        severity = 5;
+                        break;
+                }
+                return severity;
+            }
+            
+            // Analyze content for severity indicators if no level was selected
+            string lowerContent = roastContent.ToLower();
+            
+            // Check for severity indicators in the content
+            if (lowerContent.Contains("terrible") || lowerContent.Contains("awful") || 
+                lowerContent.Contains("worst") || lowerContent.Contains("garbage") ||
+                lowerContent.Contains("horrible"))
+            {
+                severity = 5; // Most severe
+            }
+            else if (lowerContent.Contains("bad") || lowerContent.Contains("poor") ||
+                     lowerContent.Contains("messy") || lowerContent.Contains("sloppy"))
+            {
+                severity = 4;
+            }
+            else if (lowerContent.Contains("improve") || lowerContent.Contains("could be better") ||
+                     lowerContent.Contains("mediocre"))
+            {
+                severity = 3;
+            }
+            else if (lowerContent.Contains("good") || lowerContent.Contains("nice") ||
+                     lowerContent.Contains("decent"))
+            {
+                severity = 2;
+            }
+            else if (lowerContent.Contains("great") || lowerContent.Contains("excellent") ||
+                     lowerContent.Contains("awesome"))
+            {
+                severity = 1; // Least severe
+            }
+            
+            return severity;
+        }
+        
         private async void BtnSend_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(rtInput.Text) || rtInput.Text == "Type your message here...")
@@ -1171,7 +1274,7 @@ namespace RoastMyCode
             {
                 string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
                 string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
-
+                
                 AddChatMessage(aiResponse, "assistant");
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
                 

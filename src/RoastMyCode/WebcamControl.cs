@@ -32,6 +32,17 @@ namespace RoastMyCode
         private Bitmap? _currentFrame;
         private bool _isDarkMode = true;
         
+        // Animation properties
+        private System.Windows.Forms.Timer? _animationTimer;
+        private float _animationIntensity = 0.0f;
+        private bool _animationIncreasing = true;
+        private int _animationSpeed = 50; // milliseconds
+        private float _animationStep = 0.05f;
+        private int _animationDuration = 3000; // milliseconds
+        private DateTime _animationStartTime;
+        private bool _isAnimating = false;
+        private int _roastSeverity = 1; // 1-5 scale, 5 being most severe
+        
         // Events
         public event EventHandler<WebcamPermissionEventArgs>? WebcamPermissionChanged;
 
@@ -262,42 +273,192 @@ namespace RoastMyCode
             }
         }
         
+        /// <summary>
+        /// Initializes the animation timer for dynamic effects
+        /// </summary>
+        private void InitializeAnimationTimer()
+        {
+            if (_animationTimer == null)
+            {
+                _animationTimer = new System.Windows.Forms.Timer();
+                _animationTimer.Interval = _animationSpeed;
+                _animationTimer.Tick += AnimationTimer_Tick;
+            }
+        }
+        
+        /// <summary>
+        /// Updates the animation state on each timer tick
+        /// </summary>
+        private void AnimationTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!_isAnimating) return;
+            
+            // Check if animation duration has elapsed
+            if ((DateTime.Now - _animationStartTime).TotalMilliseconds > _animationDuration)
+            {
+                StopAnimation();
+                return;
+            }
+            
+            // Update animation intensity
+            if (_animationIncreasing)
+            {
+                _animationIntensity += _animationStep;
+                if (_animationIntensity >= 1.0f)
+                {
+                    _animationIntensity = 1.0f;
+                    _animationIncreasing = false;
+                }
+            }
+            else
+            {
+                _animationIntensity -= _animationStep;
+                if (_animationIntensity <= 0.0f)
+                {
+                    _animationIntensity = 0.0f;
+                    _animationIncreasing = true;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Starts an animated effect based on roast severity
+        /// </summary>
+        /// <param name="severity">Severity level 1-5</param>
+        /// <param name="effectName">Name of the effect to apply</param>
+        public void StartAnimatedEffect(int severity, string effectName)
+        {
+            _roastSeverity = Math.Clamp(severity, 1, 5);
+            _currentEffect = effectName;
+            
+            // Configure animation based on severity
+            _animationStep = 0.05f * _roastSeverity / 3.0f;
+            _animationDuration = 3000 + (_roastSeverity * 1000);
+            
+            // Initialize animation state
+            _animationIntensity = 0.0f;
+            _animationIncreasing = true;
+            _isAnimating = true;
+            _animationStartTime = DateTime.Now;
+            
+            // Start the animation timer
+            InitializeAnimationTimer();
+            if (_animationTimer != null && !_animationTimer.Enabled)
+            {
+                _animationTimer.Start();
+            }
+        }
+        
+        /// <summary>
+        /// Stops the current animation
+        /// </summary>
+        public void StopAnimation()
+        {
+            if (_animationTimer != null)
+            {
+                _animationTimer.Stop();
+            }
+            
+            _isAnimating = false;
+            _animationIntensity = 0.0f;
+        }
+        
+        /// <summary>
+        /// Disposes of webcam and animation resources
+        /// </summary>
+        public void Dispose()
+        {
+            StopWebcam();
+            
+            // Stop and dispose animation timer
+            StopAnimation();
+            if (_animationTimer != null)
+            {
+                _animationTimer.Tick -= AnimationTimer_Tick;
+                _animationTimer.Dispose();
+                _animationTimer = null;
+            }
+            
+            // Dispose of the video source if it exists
+            if (_videoSource != null)
+            {
+                _videoSource.SignalToStop();
+                _videoSource = null;
+            }
+            
+            // Dispose of the current frame if it exists
+            if (_currentFrame != null)
+            {
+                _currentFrame.Dispose();
+                _currentFrame = null;
+            }
+        }
+        
         private void ApplyEffect()
         {
             if (_currentFrame == null) return;
             
             Bitmap processedFrame = (Bitmap)_currentFrame.Clone();
             
+            // Calculate effect intensity based on animation and roast severity
+            float effectIntensity = _isAnimating ? _animationIntensity * _roastSeverity / 3.0f : 1.0f;
+            
             switch (_currentEffect)
             {
                 case "Grayscale":
                     Grayscale grayscaleFilter = new Grayscale(0.2125, 0.7154, 0.0721);
                     processedFrame = grayscaleFilter.Apply(processedFrame);
+                    
+                    // Add dynamic contrast based on animation
+                    if (_isAnimating)
+                    {
+                        BrightnessCorrection brightnessFilter = new BrightnessCorrection((int)(effectIntensity * 30));
+                        processedFrame = brightnessFilter.Apply(processedFrame);
+                    }
                     break;
                     
                 case "Invert":
                     Invert invertFilter = new Invert();
                     processedFrame = invertFilter.Apply(processedFrame);
+                    
+                    // Add dynamic color shift based on animation
+                    if (_isAnimating)
+                    {
+                        ChannelFiltering channelFilter = new ChannelFiltering();
+                        channelFilter.Red = new IntRange(0, (int)(255 * (1.0f - effectIntensity * 0.5f)));
+                        processedFrame = channelFilter.Apply(processedFrame);
+                    }
                     break;
                     
                 case "Clown":
                     // Increase saturation and distort colors for clown effect
                     HSLFiltering hslFilter = new HSLFiltering();
-                    hslFilter.Saturation = new AForge.Range(0.6f, 1.0f); // Use Saturation property
+                    
+                    // Dynamic saturation based on animation intensity
+                    float saturationMin = 0.6f + (effectIntensity * 0.2f);
+                    float saturationMax = 0.8f + (effectIntensity * 0.2f);
+                    hslFilter.Saturation = new AForge.Range(saturationMin, saturationMax);
+                    
+                    // Dynamic hue shift based on animation
+                    if (_isAnimating)
+                    {
+                        hslFilter.Hue = new AForge.Range(-0.1f * effectIntensity, 0.1f * effectIntensity);
+                    }
+                    
                     processedFrame = hslFilter.Apply(processedFrame);
                     
-                    // Add some color distortion
+                    // Add some color distortion with animation
                     ChannelFiltering channelFilter = new ChannelFiltering();
-                    channelFilter.Red = new IntRange(100, 255);
-                    channelFilter.Green = new IntRange(0, 200);
-                    channelFilter.Blue = new IntRange(0, 200);
+                    channelFilter.Red = new IntRange((int)(100 * (1.0f - effectIntensity * 0.3f)), 255);
+                    channelFilter.Green = new IntRange(0, (int)(200 * (1.0f + effectIntensity * 0.2f)));
+                    channelFilter.Blue = new IntRange(0, (int)(200 * (1.0f - effectIntensity * 0.3f)));
                     processedFrame = channelFilter.Apply(processedFrame);
                     break;
                     
                 case "Pixelate":
-                    // Create a pixelation effect
+                    // Create a pixelation effect with dynamic pixel size
                     Pixellate pixellateFilter = new Pixellate();
-                    pixellateFilter.PixelSize = 5;
+                    pixellateFilter.PixelSize = (int)(3 + (effectIntensity * _roastSeverity));
                     processedFrame = pixellateFilter.Apply(processedFrame);
                     break;
                     
@@ -305,6 +466,31 @@ namespace RoastMyCode
                     // Apply a sepia tone effect
                     Sepia sepiaFilter = new Sepia();
                     processedFrame = sepiaFilter.Apply(processedFrame);
+                    
+                    // Add vignette effect based on animation
+                    if (_isAnimating && effectIntensity > 0.5f)
+                    {
+                        // Create a simple vignette by darkening edges
+                        using (Graphics g = Graphics.FromImage(processedFrame))
+                        {
+                            int width = processedFrame.Width;
+                            int height = processedFrame.Height;
+                            
+                            // Create a gradient brush for vignette
+                            using (System.Drawing.Drawing2D.PathGradientBrush pgb = 
+                                   new System.Drawing.Drawing2D.PathGradientBrush(new System.Drawing.Point[] {
+                                       new System.Drawing.Point(0, 0),
+                                       new System.Drawing.Point(width, 0),
+                                       new System.Drawing.Point(width, height),
+                                       new System.Drawing.Point(0, height)
+                                   }))
+                            {
+                                pgb.CenterColor = Color.FromArgb(0, 0, 0, 0); // Transparent center
+                                pgb.SurroundColors = new Color[] { Color.FromArgb((int)(150 * effectIntensity), 0, 0, 0) };
+                                g.FillRectangle(pgb, 0, 0, width, height);
+                            }
+                        }
+                    }
                     break;
                     
                 case "None":
@@ -321,15 +507,121 @@ namespace RoastMyCode
             if (_statusLabel != null)
             {
                 _statusLabel.Text = message;
-                _statusLabel.ForeColor = Color.Red;
                 _statusLabel.Visible = true;
+                _statusLabel.ForeColor = Color.Red;
+            }
+            Debug.WriteLine($"Webcam error: {message}");
+            
+            // Show permission denied UI
+            ShowPermissionDeniedUI();
+        }
+        
+        /// <summary>
+        /// Shows a user-friendly UI when webcam permission is denied
+        /// </summary>
+        private void ShowPermissionDeniedUI()
+        {
+            // Clear any existing permission UI elements
+            foreach (Control control in Controls)
+            {
+                if (control.Tag?.ToString() == "permission_ui")
+                {
+                    Controls.Remove(control);
+                    control.Dispose();
+                }
             }
             
-            if (_startButton != null)
-                _startButton.Enabled = true;
+            // Create a panel for the permission denied message
+            Panel permissionPanel = new Panel
+            {
+                Size = new Size(300, 200),
+                Location = new System.Drawing.Point(10, 20),
+                BackColor = _isDarkMode ? Color.FromArgb(40, 40, 40) : Color.WhiteSmoke,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "permission_ui"
+            };
+            
+            // Add an icon
+            PictureBox cameraIcon = new PictureBox
+            {
+                Size = new Size(48, 48),
+                Location = new System.Drawing.Point((permissionPanel.Width - 48) / 2, 20),
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                BackColor = Color.Transparent,
+                Tag = "permission_ui"
+            };
+            
+            // Create camera icon dynamically
+            Bitmap iconBitmap = new Bitmap(48, 48);
+            using (Graphics g = Graphics.FromImage(iconBitmap))
+            {
+                g.Clear(_isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray);
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 
-            if (_stopButton != null)
-                _stopButton.Enabled = false;
+                // Draw camera shape
+                using (Pen pen = new Pen(_isDarkMode ? Color.White : Color.Black, 2))
+                {
+                    g.DrawRectangle(pen, 8, 12, 32, 24);
+                    
+                    // Draw lens
+                    g.DrawEllipse(pen, 16, 16, 16, 16);
+                    
+                    // Draw slash for "no camera"
+                    pen.Color = Color.Red;
+                    g.DrawLine(pen, 8, 8, 40, 40);
+                }
+            }
+            cameraIcon.Image = iconBitmap;
+            permissionPanel.Controls.Add(cameraIcon);
+            
+            // Add heading
+            Label headingLabel = new Label
+            {
+                Text = "Camera Access Denied",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = _isDarkMode ? Color.White : Color.Black,
+                AutoSize = true,
+                Location = new System.Drawing.Point(0, 80),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Width = permissionPanel.Width,
+                Tag = "permission_ui"
+            };
+            permissionPanel.Controls.Add(headingLabel);
+            
+            // Add instructions
+            Label instructionsLabel = new Label
+            {
+                Text = "Please enable camera access in your browser or system settings to use this feature.",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = _isDarkMode ? Color.LightGray : Color.DarkGray,
+                Location = new System.Drawing.Point(10, 110),
+                Size = new Size(280, 60),
+                TextAlign = ContentAlignment.TopCenter,
+                Tag = "permission_ui"
+            };
+            permissionPanel.Controls.Add(instructionsLabel);
+            
+            // Add retry button
+            Button retryButton = new Button
+            {
+                Text = "Retry",
+                Size = new Size(100, 30),
+                Location = new System.Drawing.Point((permissionPanel.Width - 100) / 2, 160),
+                BackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.LightGray,
+                ForeColor = _isDarkMode ? Color.White : Color.Black,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "permission_ui"
+            };
+            retryButton.Click += (s, e) => {
+                Controls.Remove(permissionPanel);
+                permissionPanel.Dispose();
+                StartWebcam();
+            };
+            permissionPanel.Controls.Add(retryButton);
+            
+            // Add the panel to the control
+            Controls.Add(permissionPanel);
+            permissionPanel.BringToFront();
         }
         
         private void UpdateAppearance()
