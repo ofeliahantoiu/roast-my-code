@@ -1348,72 +1348,7 @@ namespace RoastMyCode
 
         // This method was duplicated and has been removed
         
-        /// <summary>
-        /// Analyzes roast content to determine severity on a scale of 1-5
-        /// </summary>
-        private int DetermineRoastSeverity(string roastContent)
-        {
-            // Default to medium severity
-            int severity = 3;
-            
-            // Check for selected roast level in combo box
-            if (cmbRoastLevel.SelectedIndex > 0)
-            {
-                string? selectedLevel = cmbRoastLevel.SelectedItem?.ToString();
-                switch (selectedLevel)
-                {
-                    case "Mild":
-                        severity = 1;
-                        break;
-                    case "Medium":
-                        severity = 2;
-                        break;
-                    case "Spicy":
-                        severity = 3;
-                        break;
-                    case "Hot":
-                        severity = 4;
-                        break;
-                    case "Savage":
-                        severity = 5;
-                        break;
-                }
-                return severity;
-            }
-            
-            // Analyze content for severity indicators if no level was selected
-            string lowerContent = roastContent.ToLower();
-            
-            // Check for severity indicators in the content
-            if (lowerContent.Contains("terrible") || lowerContent.Contains("awful") || 
-                lowerContent.Contains("worst") || lowerContent.Contains("garbage") ||
-                lowerContent.Contains("horrible"))
-            {
-                severity = 5; // Most severe
-            }
-            else if (lowerContent.Contains("bad") || lowerContent.Contains("poor") ||
-                     lowerContent.Contains("messy") || lowerContent.Contains("sloppy"))
-            {
-                severity = 4;
-            }
-            else if (lowerContent.Contains("improve") || lowerContent.Contains("could be better") ||
-                     lowerContent.Contains("mediocre"))
-            {
-                severity = 3;
-            }
-            else if (lowerContent.Contains("good") || lowerContent.Contains("nice") ||
-                     lowerContent.Contains("decent"))
-            {
-                severity = 2;
-            }
-            else if (lowerContent.Contains("great") || lowerContent.Contains("excellent") ||
-                     lowerContent.Contains("awesome"))
-            {
-                severity = 1; // Least severe
-            }
-            
-            return severity;
-        }
+        // The duplicate DetermineRoastSeverity method was completely removed to fix build error
         
         private async void BtnSend_Click(object? sender, EventArgs e)
         {
@@ -1448,25 +1383,17 @@ namespace RoastMyCode
         {
             string message = rtInput.Text;
             
-            // Check for code in the message and update language display directly
-            if (message.Contains("{") && message.Contains("}") && message.Length > 20)
+            // Detect language from the message content
+            string detectedLanguage = ExtractLanguageFromMessage(message);
+            
+            // If language was detected, update the language display
+            if (!string.IsNullOrEmpty(detectedLanguage))
             {
-                // Directly detect language from code content
-                string detectedLanguage = "C#"; // Default to C#
-                
-                if (message.Contains("def ") && message.Contains(":"))
-                    detectedLanguage = "Python";
-                else if (message.Contains("function") || message.Contains("=>"))
-                    detectedLanguage = "JavaScript";
-                else if (message.Contains("public static void main"))
-                    detectedLanguage = "Java";
-                
                 // Update the language display immediately
                 UpdateLanguageDisplay(detectedLanguage);
                 
-                // Apply syntax highlighting to the input box
+                // Apply syntax highlighting to the input box for next input
                 rtInput.Language = detectedLanguage;
-                rtInput.ApplySyntaxHighlighting();
             }
             
             AddChatMessage(message, "user");
@@ -1624,93 +1551,165 @@ namespace RoastMyCode
 
         private string ExtractLanguageFromMessage(string message)
         {
+            // Check for markdown code blocks with language specifier
+            var markdownMatch = Regex.Match(message, @"```([\w#+]*)[\s\S]*?```");
+            if (markdownMatch.Success && markdownMatch.Groups.Count > 1 && !string.IsNullOrWhiteSpace(markdownMatch.Groups[1].Value))
+            {
+                string lang = markdownMatch.Groups[1].Value.ToLower().Trim();
+                if (!string.IsNullOrEmpty(lang))
+                {
+                    string normalizedLang = NormalizeLanguageName(lang);
+                    // Apply syntax highlighting to the input box
+                    if (!string.IsNullOrEmpty(normalizedLang) && rtInput != null)
+                    {
+                        rtInput.Language = normalizedLang;
+                        rtInput.ApplySyntaxHighlighting();
+                    }
+                    return normalizedLang;
+                }
+            }
+            
+            // Check for file extensions in the message
+            var extensionMatch = Regex.Match(message, @"\.(cs|js|py|java|html|css|php|rb|go|ts|cpp|c|h|json|xml|md|sql)\b");
+            if (extensionMatch.Success)
+            {
+                string ext = extensionMatch.Groups[1].Value.ToLower();
+                string detectedLang = ExtensionToLanguage(ext);
+                // Apply syntax highlighting to the input box
+                if (!string.IsNullOrEmpty(detectedLang) && rtInput != null)
+                {
+                    rtInput.Language = detectedLang;
+                    rtInput.ApplySyntaxHighlighting();
+                }
+                return detectedLang;
+            }
+            
+            // Heuristic detection based on content
             string language = string.Empty;
             try
             {
-                // Try to extract language from file header format: === filename.ext (Language) ===
-                var match = Regex.Match(message, @"===\s+.+\s+\(([^)]+)\)\s+===");
-                if (match.Success && match.Groups.Count > 1)
-                {
-                    language = match.Groups[1].Value.Trim();
-                    Debug.WriteLine($"Detected language from file header: {language}");
-                    return language;
-                }
-                
-                // Try to find code snippets with markdown language identifiers
-                var codeBlockMatch = Regex.Match(message, @"```([a-zA-Z0-9#+]+)");
-                if (codeBlockMatch.Success && codeBlockMatch.Groups.Count > 1)
-                {
-                    language = codeBlockMatch.Groups[1].Value.Trim();
-                    Debug.WriteLine($"Detected language from markdown code block: {language}");
-                    return language;
-                }
-                
-                // Try to extract language from file extension
-                match = Regex.Match(message, @"\.(cs|js|ts|py|java|cpp|c|php|rb|go|rs|swift|kt|dart|html|css|json|yaml|md)\b");
-                if (match.Success && match.Groups.Count > 1)
-                {
-                    string ext = match.Groups[1].Value.ToLower();
-                    language = ext switch
-                    {
-                        "cs" => "C#",
-                        "js" => "JavaScript",
-                        "ts" => "TypeScript",
-                        "py" => "Python",
-                        "java" => "Java",
-                        "cpp" => "C++",
-                        "c" => "C",
-                        "php" => "PHP",
-                        "rb" => "Ruby",
-                        "go" => "Go",
-                        "rs" => "Rust",
-                        "swift" => "Swift",
-                        "kt" => "Kotlin",
-                        "dart" => "Dart",
-                        "html" => "HTML",
-                        "css" => "CSS",
-                        "json" => "JSON",
-                        "yaml" => "YAML",
-                        "md" => "Markdown",
-                        _ => "Unknown"
-                    };
-                    Debug.WriteLine($"Language detected from file extension: {language}");
-                    return language;
-                }
-                
-                // Try to detect language from code content
-                if (message.Contains("public class") || message.Contains("private class") || 
-                    message.Contains("namespace") || message.Contains("using System"))
-                {
+                if (message.Contains("public class") || message.Contains("namespace") || message.Contains("using System"))
                     language = "C#";
-                    Debug.WriteLine("Detected C# from code patterns");
-                    return language;
-                }
-                else if (message.Contains("function") && (message.Contains("{") || message.Contains("=>")))
-                {
+                else if (message.Contains("function ") || message.Contains("const ") || message.Contains("let ") || message.Contains("var ") && message.Contains("{"))
                     language = "JavaScript";
-                    Debug.WriteLine("Detected JavaScript from code patterns");
-                    return language;
-                }
-                else if (message.Contains("def ") && message.Contains(":"))
-                {
+                else if (message.Contains("def ") && message.Contains(":") || message.Contains("import ") && message.Contains("from "))
                     language = "Python";
-                    Debug.WriteLine("Detected Python from code patterns");
-                    return language;
-                }
-                else if (message.Contains("public static void main") || (message.Contains("class ") && message.Contains("{")))
-                {
+                else if (message.Contains("public static void main") || message.Contains("public class") && message.Contains("{"))
                     language = "Java";
-                    Debug.WriteLine("Detected Java from code patterns");
-                    return language;
-                }
                 
-                Debug.WriteLine("No language detected in message");
+                // Apply syntax highlighting to the input box if language was detected
+                if (!string.IsNullOrEmpty(language) && rtInput != null)
+                {
+                    rtInput.Language = language;
+                    rtInput.ApplySyntaxHighlighting();
+                }
             }
             catch (Exception ex) 
             { 
                 Debug.WriteLine($"Error extracting language: {ex.Message}");
             }
             return language;
+        }
+        
+        /// <summary>
+        /// Extracts plain text from a message by removing code blocks for speech synthesis
+        /// </summary>
+        /// <param name="message">The message containing potential code blocks</param>
+        /// <returns>Plain text suitable for speech synthesis</returns>
+        private string ExtractTextForSpeech(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return string.Empty;
+                
+            // Remove markdown code blocks
+            string result = Regex.Replace(message, @"```[\s\S]*?```", "[code omitted]");
+            
+            // Remove inline code blocks
+            result = Regex.Replace(result, @"`[^`]+`", "[code reference]");
+            
+            // Remove URLs
+            result = Regex.Replace(result, @"https?://\S+", "[link]");
+            
+            // Replace multiple newlines with a single one
+            result = Regex.Replace(result, @"\n{2,}", "\n");
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// Normalizes language names to a standard format
+        /// </summary>
+        private string NormalizeLanguageName(string language)
+        {
+            if (string.IsNullOrEmpty(language)) return "";
+            
+            language = language.ToLower().Trim();
+            
+            switch (language)
+            {
+                case "cs":
+                case "csharp":
+                case "c#":
+                    return "C#";
+                    
+                case "js":
+                case "javascript":
+                case "node":
+                case "nodejs":
+                    return "JavaScript";
+                    
+                case "py":
+                case "python":
+                    return "Python";
+                    
+                case "java":
+                    return "Java";
+                    
+                case "html":
+                    return "HTML";
+                    
+                case "css":
+                    return "CSS";
+                    
+                case "php":
+                    return "PHP";
+                    
+                default:
+                    // Try to capitalize the first letter for other languages
+                    if (language.Length > 0)
+                    {
+                        return char.ToUpper(language[0]) + language.Substring(1);
+                    }
+                    return language;
+            }
+        }
+        
+        /// <summary>
+        /// Converts file extensions to language names
+        /// </summary>
+        private string ExtensionToLanguage(string extension)
+        {
+            switch (extension.ToLower())
+            {
+                case "cs": return "C#";
+                case "js": return "JavaScript";
+                case "py": return "Python";
+                case "java": return "Java";
+                case "html": return "HTML";
+                case "css": return "CSS";
+                case "php": return "PHP";
+                case "rb": return "Ruby";
+                case "go": return "Go";
+                case "ts": return "TypeScript";
+                case "cpp": return "C++";
+                case "c": return "C";
+                case "h": return "C";
+                case "json": return "JSON";
+                case "xml": return "XML";
+                case "md": return "Markdown";
+                case "sql": return "SQL";
+                default: return "";
+            }
         }
 
         /// <summary>
@@ -1725,9 +1724,20 @@ namespace RoastMyCode
                 Debug.WriteLine("languageDisplay control exists");
                 if (!string.IsNullOrEmpty(language))
                 {
-                    languageDisplay.Language = language;
-                    languageDisplay.Invalidate();
-                    Debug.WriteLine($"Updated language display to: {language}");
+                    // Only update if language has changed
+                    if (languageDisplay.Language != language)
+                    {
+                        // Update the language
+                        languageDisplay.Language = language;
+                        
+                        // Make sure the language display is visible
+                        languageDisplay.Visible = true;
+                        
+                        // Animate the language display to draw attention
+                        AnimateLanguageDisplay();
+                        
+                        Debug.WriteLine($"Updated language display to: {language}");
+                    }
                 }
                 else
                 {
@@ -1738,6 +1748,56 @@ namespace RoastMyCode
             {
                 Debug.WriteLine("languageDisplay control is null");
             }
+        }
+        
+        /// <summary>
+        /// Animates the language display to draw attention to it
+        /// </summary>
+        private void AnimateLanguageDisplay()
+        {
+            if (languageDisplay == null) return;
+            
+            // Store original size
+            Size originalSize = languageDisplay.Size;
+            
+            // Create a timer for the animation
+            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
+            animationTimer.Interval = 50;
+            
+            int animationStep = 0;
+            int totalSteps = 10;
+            
+            animationTimer.Tick += (s, e) =>
+            {
+                animationStep++;
+                
+                if (animationStep <= totalSteps / 2)
+                {
+                    // First half: grow slightly
+                    float progress = (float)animationStep / (totalSteps / 2);
+                    languageDisplay.Size = new Size(
+                        originalSize.Width + (int)(originalSize.Width * 0.05 * progress),
+                        originalSize.Height + (int)(originalSize.Height * 0.05 * progress));
+                }
+                else
+                {
+                    // Second half: return to original size
+                    float progress = (float)(animationStep - totalSteps / 2) / (totalSteps / 2);
+                    languageDisplay.Size = new Size(
+                        originalSize.Width + (int)(originalSize.Width * 0.05 * (1 - progress)),
+                        originalSize.Height + (int)(originalSize.Height * 0.05 * (1 - progress)));
+                }
+                
+                if (animationStep >= totalSteps)
+                {
+                    // Animation complete
+                    languageDisplay.Size = originalSize;
+                    animationTimer.Stop();
+                    animationTimer.Dispose();
+                }
+            };
+            
+            animationTimer.Start();
         }
 
         private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)

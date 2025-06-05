@@ -109,9 +109,15 @@ namespace RoastMyCode
                         Color.FromArgb(86, 156, 214), RegexOptions.None), // Keywords
                     new HighlightPattern(@"\b(bool|byte|char|decimal|double|float|int|long|object|sbyte|short|string|uint|ulong|ushort|var|void)\b", 
                         Color.FromArgb(78, 201, 176), RegexOptions.None), // Types
-                    new HighlightPattern(@"^\s*#\w+", Color.FromArgb(155, 155, 155), RegexOptions.Multiline) // Preprocessor directives
+                    new HighlightPattern(@"^\s*#\w+", Color.FromArgb(155, 155, 155), RegexOptions.Multiline), // Preprocessor directives
+                    new HighlightPattern(@"\b([0-9]+)\b", Color.FromArgb(181, 206, 168), RegexOptions.None), // Numbers
+                    new HighlightPattern(@"\b([A-Z][A-Za-z0-9_]+)\b", Color.FromArgb(220, 220, 170), RegexOptions.None) // Class names
                 }
             };
+            
+            // Add C# alias
+            definitions["cs"] = definitions["c#"];
+            definitions["csharp"] = definitions["c#"];
 
             // JavaScript language definition
             definitions["javascript"] = new LanguageDefinition
@@ -123,33 +129,44 @@ namespace RoastMyCode
                     new HighlightPattern("\".*?\"", Color.FromArgb(214, 157, 133), RegexOptions.None), // Double-quoted strings
                     new HighlightPattern("'.*?'", Color.FromArgb(214, 157, 133), RegexOptions.None), // Single-quoted strings
                     new HighlightPattern("`.*?`", Color.FromArgb(214, 157, 133), RegexOptions.None), // Template literals
-                    new HighlightPattern(@"\b(break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|function|if|import|in|instanceof|new|return|super|switch|this|throw|try|typeof|var|void|while|with|yield|async|await|of)\b", 
+                    new HighlightPattern(@"\b(break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|function|if|import|in|instanceof|new|return|super|switch|this|throw|try|typeof|var|void|while|with|yield|async|await|of|let)\b", 
                         Color.FromArgb(86, 156, 214), RegexOptions.None), // Keywords
                     new HighlightPattern(@"\b(true|false|null|undefined|NaN|Infinity)\b", 
                         Color.FromArgb(86, 156, 214), RegexOptions.None), // Constants
-                    new HighlightPattern(@"\b(Array|Boolean|Date|Error|Function|JSON|Math|Number|Object|RegExp|String|Promise|Map|Set|Symbol|setTimeout|clearTimeout|setInterval|clearInterval)\b", 
-                        Color.FromArgb(78, 201, 176), RegexOptions.None) // Built-in objects
+                    new HighlightPattern(@"\b(Array|Boolean|Date|Error|Function|JSON|Math|Number|Object|RegExp|String|Promise|Map|Set|Symbol|setTimeout|clearTimeout|setInterval|clearInterval|document|window|console)\b", 
+                        Color.FromArgb(78, 201, 176), RegexOptions.None), // Built-in objects
+                    new HighlightPattern(@"\b([0-9]+)\b", Color.FromArgb(181, 206, 168), RegexOptions.None), // Numbers
+                    new HighlightPattern(@"\b([A-Z][A-Za-z0-9_]+)\b", Color.FromArgb(220, 220, 170), RegexOptions.None) // Class names
                 }
             };
+            
+            // Add JavaScript aliases
+            definitions["js"] = definitions["javascript"];
+            definitions["jsx"] = definitions["javascript"];
+            definitions["node"] = definitions["javascript"];
 
             // Python language definition
             definitions["python"] = new LanguageDefinition
             {
                 Patterns = new List<HighlightPattern>
                 {
-                    new HighlightPattern(@"#.*$", Color.Green, RegexOptions.Multiline), // Single line comments
-                    new HighlightPattern("'''.*?'''", Color.Green, RegexOptions.Singleline), // Multi-line strings/comments
-                    new HighlightPattern("\"\"\".*?\"\"\"", Color.Green, RegexOptions.Singleline), // Multi-line strings/comments
+                    new HighlightPattern(@"#.*$", Color.Green, RegexOptions.Multiline), // Comments
+                    new HighlightPattern(@""".*?""", Color.FromArgb(214, 157, 133), RegexOptions.Singleline), // Triple-quoted strings
                     new HighlightPattern("\".*?\"", Color.FromArgb(214, 157, 133), RegexOptions.None), // Double-quoted strings
                     new HighlightPattern("'.*?'", Color.FromArgb(214, 157, 133), RegexOptions.None), // Single-quoted strings
-                    new HighlightPattern(@"\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b", 
+                    new HighlightPattern(@"\b(and|as|assert|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|async|await)\b", 
                         Color.FromArgb(86, 156, 214), RegexOptions.None), // Keywords
-                    new HighlightPattern(@"\b(True|False|None|NotImplemented|Ellipsis|__debug__)\b", 
+                    new HighlightPattern(@"\b(True|False|None|NotImplemented|Ellipsis)\b", 
                         Color.FromArgb(86, 156, 214), RegexOptions.None), // Constants
-                    new HighlightPattern(@"\b(object|int|float|bool|str|list|tuple|set|dict|frozenset|bytearray|bytes)\b", 
-                        Color.FromArgb(78, 201, 176), RegexOptions.None) // Built-in types
+                    new HighlightPattern(@"\b(abs|all|any|ascii|bin|bool|bytearray|bytes|callable|chr|classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|eval|exec|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|len|list|locals|map|max|memoryview|min|next|object|oct|open|ord|pow|print|property|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip)\b", 
+                        Color.FromArgb(78, 201, 176), RegexOptions.None), // Built-in functions
+                    new HighlightPattern(@"\b([0-9]+)\b", Color.FromArgb(181, 206, 168), RegexOptions.None), // Numbers
+                    new HighlightPattern(@"\b([A-Z][A-Za-z0-9_]+)\b", Color.FromArgb(220, 220, 170), RegexOptions.None) // Class names
                 }
             };
+            
+            // Add Python alias
+            definitions["py"] = definitions["python"];
 
             // Java language definition
             definitions["java"] = new LanguageDefinition

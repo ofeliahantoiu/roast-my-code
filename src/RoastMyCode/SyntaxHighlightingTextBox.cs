@@ -11,7 +11,7 @@ namespace RoastMyCode
     /// </summary>
     public class SyntaxHighlightingTextBox : RichTextBox
     {
-        private string _language = "None";
+        private string _language = "c#";
         private bool _isDarkMode = true;
         private SyntaxHighlighter _highlighter;
         private Timer _highlightTimer;
@@ -20,19 +20,25 @@ namespace RoastMyCode
         private Color _borderColor = Color.FromArgb(60, 60, 60);
         private int _borderWidth = 1;
 
+        /// <summary>
+        /// Gets or sets the programming language for syntax highlighting
+        /// </summary>
         public string Language
         {
-            get => _language;
-            set
-            {
-                if (_language != value)
+            get { return _language; }
+            set 
+            { 
+                _language = value; 
+                if (HighlightingEnabled)
                 {
-                    _language = value;
                     ApplySyntaxHighlighting();
                 }
             }
         }
 
+        /// <summary>
+        /// Gets or sets whether dark mode is enabled
+        /// </summary>
         public bool IsDarkMode
         {
             get => _isDarkMode;
@@ -46,6 +52,9 @@ namespace RoastMyCode
             }
         }
 
+        /// <summary>
+        /// Gets or sets whether syntax highlighting is enabled
+        /// </summary>
         public bool HighlightingEnabled
         {
             get => _highlightingEnabled;
@@ -128,6 +137,9 @@ namespace RoastMyCode
             ApplySyntaxHighlighting();
         }
 
+        /// <summary>
+        /// Applies syntax highlighting based on the current language setting
+        /// </summary>
         public void ApplySyntaxHighlighting()
         {
             if (!_highlightingEnabled || string.IsNullOrEmpty(_language) || _language == "None")
