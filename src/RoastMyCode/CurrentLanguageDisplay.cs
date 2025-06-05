@@ -11,12 +11,15 @@ namespace RoastMyCode
     public class CurrentLanguageDisplay : UserControl
     {
         private string _language = "None";
-        private readonly Font _titleFont = new Font("Segoe UI", 9f, FontStyle.Bold);
-        private readonly Font _languageFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        private readonly int _cornerRadius = 10;
-        private readonly Color _darkBackColor = Color.FromArgb(60, 60, 60);
-        private readonly Color _lightBackColor = Color.FromArgb(240, 240, 240);
+        private readonly int _cornerRadius = 8; // Reduced corner radius for modern look
         private bool _isDarkMode = true;
+        private bool _isAnimating = false;
+        private float _animationProgress = 0;
+        private Timer _animationTimer;
+        
+        // Animation properties
+        private const int AnimationDuration = 500; // milliseconds
+        private const int AnimationInterval = 16; // ~60fps
 
         public string Language
         {
@@ -51,8 +54,42 @@ namespace RoastMyCode
                     ControlStyles.OptimizedDoubleBuffer |
                     ControlStyles.ResizeRedraw, true);
             
-            Size = new Size(200, 80);
+            Size = new Size(200, 70); // Slightly smaller height for minimal look
             BackColor = Color.Transparent;
+            
+            // Initialize animation timer
+            _animationTimer = new Timer
+            {
+                Interval = AnimationInterval
+            };
+            _animationTimer.Tick += AnimationTimer_Tick;
+        }
+        
+        /// <summary>
+        /// Handles animation timer ticks to update the animation progress
+        /// </summary>
+        private void AnimationTimer_Tick(object sender, EventArgs e)
+        {
+            _animationProgress += (float)AnimationInterval / AnimationDuration;
+            
+            if (_animationProgress >= 1.0f)
+            {
+                _animationProgress = 1.0f;
+                _isAnimating = false;
+                _animationTimer.Stop();
+            }
+            
+            Invalidate();
+        }
+        
+        /// <summary>
+        /// Starts the animation effect when language changes
+        /// </summary>
+        public void AnimateLanguageChange()
+        {
+            _isAnimating = true;
+            _animationProgress = 0;
+            _animationTimer.Start();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -62,56 +99,97 @@ namespace RoastMyCode
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            // Background
-            Color backColor = _isDarkMode ? _darkBackColor : _lightBackColor;
-            Color textColor = _isDarkMode ? Color.White : Color.Black;
+            // Get colors from ThemeManager
+            Color backColor = _isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
+            Color textColor = _isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
+            Color borderColor = _isDarkMode ? ThemeManager.DarkTheme.Border : ThemeManager.LightTheme.Border;
             Color accentColor = GetLanguageColor(_language);
 
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            // Apply animation effect if active
+            float scale = 1.0f;
+            float opacity = 1.0f;
+            if (_isAnimating)
+            {
+                // Ease-out animation
+                float progress = (float)Math.Pow(_animationProgress, 0.5);
+                scale = 0.95f + (0.05f * progress);
+                opacity = progress;
+            }
+
+            // Calculate scaled rectangle
+            int widthDiff = (int)((1 - scale) * Width);
+            int heightDiff = (int)((1 - scale) * Height);
+            Rectangle rect = new Rectangle(
+                widthDiff / 2,
+                heightDiff / 2,
+                Width - widthDiff - 1,
+                Height - heightDiff - 1);
+
+            // Draw background with subtle shadow effect
             using (GraphicsPath path = CreateRoundedRectangle(rect, _cornerRadius))
             {
-                using (SolidBrush brush = new SolidBrush(backColor))
+                // Draw shadow (if not animating or if animation is progressing)
+                if (!_isAnimating || _animationProgress > 0.2f)
+                {
+                    using (GraphicsPath shadowPath = CreateRoundedRectangle(
+                        new Rectangle(rect.X + 2, rect.Y + 2, rect.Width, rect.Height), _cornerRadius))
+                    {
+                        using (PathGradientBrush shadowBrush = new PathGradientBrush(shadowPath))
+                        {
+                            Color shadowColor = Color.FromArgb(
+                                (int)(20 * opacity),
+                                _isDarkMode ? Color.Black : Color.Gray);
+                            shadowBrush.CenterColor = shadowColor;
+                            shadowBrush.SurroundColors = new Color[] { Color.FromArgb(0, shadowColor) };
+                            g.FillPath(shadowBrush, shadowPath);
+                        }
+                    }
+                }
+
+                // Draw main background
+                using (SolidBrush brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), backColor)))
                 {
                     g.FillPath(brush, path);
                 }
 
                 // Add a subtle border
-                using (Pen borderPen = new Pen(_isDarkMode ? Color.FromArgb(80, 80, 80) : Color.FromArgb(200, 200, 200), 1))
+                using (Pen borderPen = new Pen(Color.FromArgb((int)(255 * opacity), borderColor), 1))
                 {
                     g.DrawPath(borderPen, path);
                 }
             }
 
             // Title text
-            string titleText = "Selected programming language:";
-            Rectangle titleRect = new Rectangle(10, 10, Width - 20, 20);
-            using (SolidBrush textBrush = new SolidBrush(textColor))
+            string titleText = "Language Detected:";
+            Rectangle titleRect = new Rectangle(12, 10, Width - 24, 20);
+            using (SolidBrush textBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), 
+                _isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary)))
             {
-                g.DrawString(titleText, _titleFont, textBrush, titleRect);
+                g.DrawString(titleText, ThemeManager.Typography.Small, textBrush, titleRect);
             }
 
-            // Language text with colored badge
-            Rectangle languageRect = new Rectangle(10, 35, Width - 20, 30);
+            // Language badge
+            int badgeWidth = Math.Min(Width - 24, 
+                (int)g.MeasureString(_language, ThemeManager.Typography.BodyBold).Width + 24);
+            Rectangle badgeRect = new Rectangle(12, 32, badgeWidth, 26);
             
-            // Draw language badge background
-            int badgeWidth = Math.Min(Width - 20, (int)g.MeasureString(_language, _languageFont).Width + 20);
-            Rectangle badgeRect = new Rectangle(10, 35, badgeWidth, 30);
-            
-            using (GraphicsPath badgePath = CreateRoundedRectangle(badgeRect, 5))
-            using (SolidBrush badgeBrush = new SolidBrush(accentColor))
+            // Draw language badge background with rounded corners
+            using (GraphicsPath badgePath = CreateRoundedRectangle(badgeRect, 6))
+            using (SolidBrush badgeBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), accentColor)))
             {
                 g.FillPath(badgeBrush, badgePath);
             }
             
             // Draw language text
-            using (SolidBrush textBrush = new SolidBrush(GetTextColorForBackground(accentColor)))
+            using (SolidBrush textBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), 
+                GetTextColorForBackground(accentColor))))
             {
                 StringFormat format = new StringFormat
                 {
                     Alignment = StringAlignment.Center,
                     LineAlignment = StringAlignment.Center
                 };
-                g.DrawString(_language, _languageFont, textBrush, 
+                g.DrawString(_language, ThemeManager.Typography.BodyBold, textBrush, 
                     new Rectangle(badgeRect.X, badgeRect.Y, badgeRect.Width, badgeRect.Height), format);
             }
         }
@@ -164,10 +242,10 @@ namespace RoastMyCode
                 "css" => Color.FromArgb(41, 134, 202),   // Brighter Blue
                 "json" => Color.FromArgb(252, 152, 3),         // Orange
                 "yaml" => Color.FromArgb(91, 163, 138),        // Green-blue
-                "markdown" => Color.FromArgb(0, 0, 0),         // Black
-                "unknown" => Color.FromArgb(100, 100, 100),    // Gray
-                "none" => Color.FromArgb(100, 100, 100),       // Gray
-                _ => _isDarkMode ? Color.FromArgb(100, 100, 100) : Color.FromArgb(160, 160, 160)  // More visible Gray
+                "markdown" => Color.FromArgb(30, 30, 30),      // Dark Gray for markdown
+                "unknown" => _isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary,
+                "none" => _isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary,
+                _ => _isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary
             };
         }
 

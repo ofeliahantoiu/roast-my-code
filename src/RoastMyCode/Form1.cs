@@ -32,6 +32,7 @@ namespace RoastMyCode
         private SoundEffectManager? _soundEffectManager;
         private bool _voiceOutputEnabled = false;
         private bool _soundEffectsEnabled = false;
+        private bool _webcamEnabled = false;
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
@@ -113,12 +114,14 @@ namespace RoastMyCode
                 }
                 
                 InitializeComponent();
+                InitializeModernUI();
+                ApplyTheme();
+                
+                // Initialize webcam, voice output, and sound effects
                 InitializeWebcam();
                 InitializeVoiceOutput();
                 InitializeSoundEffects();
-                InitializeModernUI();
-                ApplyTheme();
-
+                
                 LoadConversationHistory();
                 
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
@@ -138,11 +141,7 @@ namespace RoastMyCode
                     Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
                 });
 
-                InitializeComponent(); 
-                InitializeModernUI();
-                ApplyTheme();
-
-                LoadConversationHistory();
+                // This is a duplicate initialization block that should be removed
             }
             catch (Exception ex)
             {
@@ -152,37 +151,46 @@ namespace RoastMyCode
             }
         }
         
+        /// <summary>
+        /// Initializes the webcam functionality
+        /// </summary>
         private void InitializeWebcam()
         {
             try
             {
-                // Create and configure webcam control
+                // Create webcam control
                 _webcamControl = new WebcamControl
                 {
-                    Size = new Size(320, 280),
-                    Location = new Point(this.ClientSize.Width - 340, 120),
+                    Size = new Size(320, 240),
+                    Location = new Point((this.ClientSize.Width - 320) / 2, (this.ClientSize.Height - 240) / 2),
+                    Anchor = AnchorStyles.None,
                     Visible = false,
                     IsDarkMode = _isDarkMode
                 };
                 
-                // Add webcam permission changed event handler
-                _webcamControl.WebcamPermissionChanged += WebcamControl_WebcamPermissionChanged;
-                
-                // Add to form controls
+                // Add webcam control to form (initially hidden)
                 this.Controls.Add(_webcamControl);
                 _webcamControl.BringToFront();
+                
+                // Subscribe to webcam permission events
+                _webcamControl.WebcamPermissionChanged += WebcamControl_WebcamPermissionChanged;
+                
+                Debug.WriteLine("Webcam functionality initialized");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error initializing webcam: {ex.Message}");
-                // Continue without webcam functionality
+                // Don't show error to user - webcam is optional
             }
         }
         
+        /// <summary>
+        /// Handles webcam permission change events
+        /// </summary>
         private void WebcamControl_WebcamPermissionChanged(object? sender, WebcamPermissionEventArgs e)
         {
-            // Handle webcam permission changes
-            if (e.IsPermissionGranted)
+            // Update UI based on webcam permission status
+            if (e.HasPermission)
             {
                 Debug.WriteLine("Webcam permission granted");
                 // Update camera icon to indicate webcam is active
@@ -199,6 +207,9 @@ namespace RoastMyCode
                 {
                     LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
                 }
+                
+                // Disable webcam functionality
+                _webcamEnabled = false;
             }
         }
         
@@ -206,28 +217,29 @@ namespace RoastMyCode
         {
             if (_webcamControl == null) return;
             
-            if (_webcamControl.Visible && _webcamControl.IsWebcamActive)
+            _webcamEnabled = !_webcamEnabled;
+            
+            if (_webcamEnabled)
             {
-                // Webcam is active, stop it
-                _webcamControl.StopWebcam();
-                _webcamControl.Visible = false;
-                
-                // Update camera icon
-                if (pbCameraIcon != null)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-                }
-            }
-            else
-            {
-                // Webcam is inactive, start it
-                _webcamControl.Visible = true;
+                // Start webcam with default effect
                 _webcamControl.StartWebcam();
+                ShowWebcamWithEffect("None");
                 
                 // Update camera icon
                 if (pbCameraIcon != null)
                 {
                     LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
+                }
+            }
+            else
+            {
+                // Hide webcam
+                HideWebcam();
+                
+                // Reset camera icon
+                if (pbCameraIcon != null)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
                 }
             }
         }
@@ -336,19 +348,19 @@ namespace RoastMyCode
         /// <param name="effect">The visual effect to apply</param>
         private void ShowWebcamWithEffect(string effect)
         {
-            if (_webcamControl != null)
+            if (_webcamControl == null || !_webcamEnabled) return;
+            
+            // Show webcam control
+            _webcamControl.Visible = true;
+            _webcamControl.BringToFront();
+            
+            // Apply the specified effect
+            _webcamControl.CurrentEffect = effect;
+            
+            // Start the webcam if it's not already active
+            if (!_webcamControl.IsWebcamActive)
             {
-                // Make webcam visible
-                _webcamControl.Visible = true;
-                
-                // Apply the specified effect
-                _webcamControl.CurrentEffect = effect;
-                
-                // Start the webcam if it's not already active
-                if (!_webcamControl.IsWebcamActive)
-                {
-                    _webcamControl.StartWebcam();
-                }
+                _webcamControl.StartWebcam();
             }
         }
         
@@ -492,6 +504,17 @@ namespace RoastMyCode
 
         private void InitializeModernUI()
         {
+            // Load theme preference if available
+            try
+            {
+                _isDarkMode = Properties.Settings.Default.IsDarkMode;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading theme preference: {ex.Message}");
+                _isDarkMode = true; // Default to dark mode
+            }
+            
             this.Text = "Roast My Code";
             this.Size = new Size(1200, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -906,7 +929,7 @@ namespace RoastMyCode
                 LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
             }
             
-            pbUploadIcon.Click += PbCameraIcon_Click;
+            pbUploadIcon.Click += PbUploadIcon_Click;
 
             pbCameraIcon = new PictureBox
             {
@@ -1170,17 +1193,22 @@ namespace RoastMyCode
 
         private void ApplyTheme()
         {
-            Color textColor = _isDarkMode ? Color.White : Color.Black;
-            Color backColor = _isDarkMode ? Color.FromArgb(45, 45, 45) : Color.White;
-            Color editorBackColor = _isDarkMode ? Color.FromArgb(50, 50, 50) : Color.White;
-            Color buttonBackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240);
+            // Get colors from ThemeManager based on current theme
+            Color textColor = _isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
+            Color backColor = _isDarkMode ? ThemeManager.DarkTheme.Background : ThemeManager.LightTheme.Background;
+            Color surfaceColor = _isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
+            Color inputBackColor = _isDarkMode ? ThemeManager.DarkTheme.InputBackground : ThemeManager.LightTheme.InputBackground;
+            Color buttonBackColor = _isDarkMode ? ThemeManager.DarkTheme.ButtonBackground : ThemeManager.LightTheme.ButtonBackground;
+            Color borderColor = _isDarkMode ? ThemeManager.DarkTheme.Border : ThemeManager.LightTheme.Border;
 
+            // Apply theme to form
             this.BackColor = backColor;
             this.ForeColor = textColor;
 
+            // Apply theme to all controls
             foreach (Control control in this.Controls)
             {
-                ApplyThemeToControl(control, _isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
+                ApplyThemeToControl(control, _isDarkMode, textColor, backColor, inputBackColor, buttonBackColor, borderColor, surfaceColor);
             }
 
             // Update language display theme
@@ -1188,6 +1216,12 @@ namespace RoastMyCode
             {
                 languageDisplay.IsDarkMode = _isDarkMode;
                 languageDisplay.Invalidate(); // Force redraw
+            }
+
+            // Update webcam control theme if available
+            if (_webcamControl != null)
+            {
+                _webcamControl.IsDarkMode = _isDarkMode;
             }
 
             UpdateLogoIcon();
@@ -1199,99 +1233,167 @@ namespace RoastMyCode
             LoadImageFromAssets(pbLogo, _isDarkMode ? "twinklewhite.png" : "twinkleblack.png");
         }
 
-        private void ApplyThemeToControl(Control control, bool isDarkMode, Color textColor, Color backColor, Color editorBackColor, Color buttonBackColor)
+        private void ApplyThemeToControl(Control control, bool isDarkMode, Color textColor, Color backColor, Color inputBackColor, Color buttonBackColor, Color borderColor, Color surfaceColor)
         {
+            // Special handling for title label
             if (control is Label titleLabel && titleLabel.Text == "Roast My Code")
             {
-                titleLabel.ForeColor = textColor;
+                titleLabel.ForeColor = isDarkMode ? ThemeManager.DarkTheme.Primary : ThemeManager.LightTheme.Primary;
+                titleLabel.Font = ThemeManager.Typography.Heading;
                 return;
             }
 
+            // Special handling for chat bubbles
             if (control is ChatMessageBubble bubble)
             {
                 if (bubble.Role == "user")
                 {
-                    bubble.BackColor = Color.FromArgb(70, 70, 70);
-                    bubble.ForeColor = Color.White;
+                    bubble.BackColor = isDarkMode ? ThemeManager.DarkTheme.SurfaceVariant : ThemeManager.LightTheme.SurfaceVariant;
+                    bubble.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
                 }
                 else
                 {
-                    bubble.ForeColor = isDarkMode ? Color.White : Color.Black;
+                    bubble.BackColor = isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
+                    bubble.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
                 }
                 bubble.Invalidate();
                 return;
             }
 
+            // Default styling for most controls
             control.BackColor = backColor;
             control.ForeColor = textColor;
 
+            // Type-specific styling
             if (control is ComboBox comboBox)
             {
-                comboBox.BackColor = isDarkMode ? Color.FromArgb(45, 45, 48) : Color.FromArgb(240, 240, 240);
+                comboBox.BackColor = inputBackColor;
                 comboBox.ForeColor = textColor;
                 comboBox.FlatStyle = FlatStyle.Flat;
                 comboBox.Invalidate();
             }
             else if (control is TextBox textBox)
             {
-                if (!string.IsNullOrWhiteSpace(rtInput.Text))
-                {
-                    textBox.ForeColor = textColor;
-                }
-                else
-                {
-                    textBox.BackColor = editorBackColor;
-                    textBox.ForeColor = textColor;
-                }
+                textBox.BackColor = inputBackColor;
+                textBox.ForeColor = textColor;
+                textBox.BorderStyle = BorderStyle.FixedSingle;
                 textBox.Invalidate();
             }
             else if (control is RichTextBox richTextBox)
             {
-                 richTextBox.BackColor = isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240); 
-                 
-                 if (richTextBox is RoundedRichTextBox rtInput)
-                 {
-                     rtInput.BorderColor = isDarkMode ? Color.FromArgb(100, 100, 100) : Color.FromArgb(180, 180, 180);
-                     rtInput.BorderWidth = 1;
-                     
-                     if (rtInput.Text != "Type your message here...")
-                     {
-                         rtInput.ForeColor = isDarkMode ? Color.White : Color.Black;
-                     }
-                 }
-                 else
-                 {
-                     richTextBox.ForeColor = textColor;
-                 }
-                 
-                 richTextBox.Invalidate();
+                richTextBox.BackColor = inputBackColor;
+                richTextBox.ForeColor = textColor;
+                
+                if (richTextBox is RoundedRichTextBox rtInput)
+                {
+                    rtInput.BorderColor = borderColor;
+                    rtInput.BorderWidth = 1;
+                    rtInput.CornerRadius = 8; // More modern rounded corners
+                    
+                    if (rtInput.Text == "Type your message here...")
+                    {
+                        rtInput.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary;
+                    }
+                }
+                
+                richTextBox.Invalidate();
+            }
+            else if (control is Button button)
+            {
+                button.BackColor = buttonBackColor;
+                button.FlatStyle = FlatStyle.Flat;
+                button.FlatAppearance.BorderColor = borderColor;
+                button.FlatAppearance.BorderSize = 1;
+                button.Font = ThemeManager.Typography.Body;
+                button.Invalidate();
             }
             else if (control is CheckBox checkBox)
             {
                 checkBox.ForeColor = textColor;
+                checkBox.Font = ThemeManager.Typography.Body;
                 checkBox.Invalidate();
             }
             else if (control is Label label)
             {
-                 if (label.Text != "Roast My Code")
-                 {
-                     label.ForeColor = textColor;
-                     label.Invalidate();
-                 }
+                if (label.Text != "Roast My Code")
+                {
+                    label.ForeColor = textColor;
+                    
+                    // Apply appropriate typography based on label role
+                    if (label.Tag != null && label.Tag.ToString() == "heading")
+                    {
+                        label.Font = ThemeManager.Typography.Subheading;
+                    }
+                    else if (label.Tag != null && label.Tag.ToString() == "small")
+                    {
+                        label.Font = ThemeManager.Typography.Small;
+                    }
+                    else
+                    {
+                        label.Font = ThemeManager.Typography.Body;
+                    }
+                    
+                    label.Invalidate();
+                }
             }
-             else if (control is PictureBox pb)
+            else if (control is Panel panel)
             {
-                pb.BackColor = backColor;
+                // Apply different styling to panels based on their role
+                if (panel == topPanel)
+                {
+                    panel.BackColor = surfaceColor;
+                }
+                else if (panel == bottomPanel)
+                {
+                    panel.BackColor = surfaceColor;
+                }
+                else if (panel == chatAreaPanel)
+                {
+                    panel.BackColor = backColor;
+                }
+                else if (panel == inputPanel)
+                {
+                    panel.BackColor = inputBackColor;
+                    panel.BorderStyle = BorderStyle.None;
+                }
+                else
+                {
+                    panel.BackColor = backColor;
+                }
+            }
+            else if (control is PictureBox pb)
+            {
+                pb.BackColor = Color.Transparent;
+                
+                // Update icons based on theme and state
                 if (pb == pbVoiceIcon)
                 {
                     LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
                         (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
                         (_isDarkMode ? "voicelight.png" : "voicedark.png"));
                 }
+                else if (pb == pbSoundIcon)
+                {
+                    LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? 
+                        (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : 
+                        (_isDarkMode ? "soundlight.png" : "sounddark.png"));
+                }
+                else if (pb == pbCameraIcon)
+                {
+                    LoadImageFromAssets(pbCameraIcon, _webcamEnabled ? 
+                        (_isDarkMode ? "camera_active_light.png" : "camera_active_dark.png") : 
+                        (_isDarkMode ? "cameralight.png" : "cameradark.png"));
+                }
+                else if (pb == pbThemeIcon)
+                {
+                    LoadImageFromAssets(pbThemeIcon, _isDarkMode ? "sunlight.png" : "moondark.png");
+                }
             }
+            
+            // Apply theme to child controls recursively
             foreach (Control child in control.Controls)
             {
-                ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
+                ApplyThemeToControl(child, isDarkMode, textColor, backColor, inputBackColor, buttonBackColor, borderColor, surfaceColor);
             }
         }
 
@@ -1315,41 +1417,38 @@ namespace RoastMyCode
             if (pbLogo != null && lblTitle != null)
             {
                 lblTitle.Location = new Point(pbLogo.Right + lblTitle.Margin.Left, (pbLogo.Height - lblTitle.Height) / 2);
-            }
-        }
-
         private void UpdateFont()
         {
-            if (cmbFontStyle.SelectedIndex > 0 || cmbFontSize.SelectedIndex > 0)
+            string fontName = ThemeManager.Typography.PrimaryFontFamily;
+            float fontSize = ThemeManager.Typography.BodySize;
+            
+            if (cmbFontStyle.SelectedIndex > 0)
             {
-                string fontFamily = cmbFontStyle.SelectedIndex > 0 ? 
-                                    cmbFontStyle.SelectedItem.ToString()! : 
-                                    _currentFont.FontFamily.Name;
-
-                float fontSize = cmbFontSize.SelectedIndex > 0 ? 
-                                 float.Parse(cmbFontSize.SelectedItem.ToString()!) : 
-                                 _currentFont.Size;
-
-                if (fontSize <= 0) fontSize = 8;
-
-                _currentFont = new Font(fontFamily, fontSize);
-
-                if (chatAreaPanel != null)
+                fontName = cmbFontStyle.SelectedItem.ToString() ?? ThemeManager.Typography.PrimaryFontFamily;
+            }
+            
+            if (cmbFontSize.SelectedIndex > 0)
+            {
+                if (float.TryParse(cmbFontSize.SelectedItem.ToString(), out float size))
                 {
-                    ApplyFontToControl(chatAreaPanel, _currentFont);
+                    fontSize = size;
                 }
-                if (rtInput != null)
-                {
-                    rtInput.Font = _currentFont;
-                    rtInput.PerformLayout();
-                }
+            }
+            
+            _currentFont = new Font(fontName, fontSize);
+            
+            foreach (Control control in this.Controls)
+            {
+                ApplyFontToControl(control, _currentFont);
+            }
+            
+            if (rtInput != null)
+            {
+                rtInput.Font = _currentFont;
+                rtInput.PerformLayout();
             }
         }
 
-        // This method was duplicated and has been removed
-        
-        // The duplicate DetermineRoastSeverity method was completely removed to fix build error
-        
         private async void BtnSend_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(rtInput.Text) || rtInput.Text == "Type your message here...")
@@ -1365,8 +1464,11 @@ namespace RoastMyCode
                 AddChatMessage(aiResponse, "assistant");
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
                 
-                // Sync webcam effect with the roast result
-                SyncWebcamWithRoast(aiResponse);
+                // Sync webcam effect with the roast result if webcam is enabled
+                if (_webcamEnabled && _webcamControl != null)
+                {
+                    SyncWebcamWithRoast(aiResponse);
+                }
             }
             catch (Exception ex)
             {
@@ -1757,47 +1859,9 @@ namespace RoastMyCode
         {
             if (languageDisplay == null) return;
             
-            // Store original size
-            Size originalSize = languageDisplay.Size;
-            
-            // Create a timer for the animation
-            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer();
-            animationTimer.Interval = 50;
-            
-            int animationStep = 0;
-            int totalSteps = 10;
-            
-            animationTimer.Tick += (s, e) =>
-            {
-                animationStep++;
-                
-                if (animationStep <= totalSteps / 2)
-                {
-                    // First half: grow slightly
-                    float progress = (float)animationStep / (totalSteps / 2);
-                    languageDisplay.Size = new Size(
-                        originalSize.Width + (int)(originalSize.Width * 0.05 * progress),
-                        originalSize.Height + (int)(originalSize.Height * 0.05 * progress));
-                }
-                else
-                {
-                    // Second half: return to original size
-                    float progress = (float)(animationStep - totalSteps / 2) / (totalSteps / 2);
-                    languageDisplay.Size = new Size(
-                        originalSize.Width + (int)(originalSize.Width * 0.05 * (1 - progress)),
-                        originalSize.Height + (int)(originalSize.Height * 0.05 * (1 - progress)));
-                }
-                
-                if (animationStep >= totalSteps)
-                {
-                    // Animation complete
-                    languageDisplay.Size = originalSize;
-                    animationTimer.Stop();
-                    animationTimer.Dispose();
-                }
-            };
-            
-            animationTimer.Start();
+            // Use the built-in animation capabilities of the CurrentLanguageDisplay control
+            // This will trigger the fade and scale animation defined in the control
+            languageDisplay.AnimateLanguageChange();
         }
 
         private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
@@ -1888,6 +1952,18 @@ namespace RoastMyCode
             _isDarkMode = !_isDarkMode;
             ApplyTheme();
             UpdateThemeIcon();
+            
+            // Save theme preference
+            try
+            {
+                Properties.Settings.Default.IsDarkMode = _isDarkMode;
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error saving theme preference: {ex.Message}");
+            }
+            
             if (pbSendIcon != null) LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
             if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
             if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
