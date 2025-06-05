@@ -29,7 +29,9 @@ namespace RoastMyCode
         private long _currentTotalSizeBytes = 0;
         private WebcamControl? _webcamControl; 
         private VoiceOutputManager? _voiceOutputManager;
+        private SoundEffectManager? _soundEffectManager;
         private bool _voiceOutputEnabled = false;
+        private bool _soundEffectsEnabled = false;
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             // File extensions
@@ -82,6 +84,7 @@ namespace RoastMyCode
         private PictureBox? pbMicIcon;
         private PictureBox? pbUploadIcon;
         private PictureBox? pbVoiceIcon;
+        private PictureBox? pbSoundIcon;
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
@@ -112,6 +115,7 @@ namespace RoastMyCode
                 InitializeComponent();
                 InitializeWebcam();
                 InitializeVoiceOutput();
+                InitializeSoundEffects();
                 InitializeModernUI();
                 ApplyTheme();
 
@@ -249,6 +253,27 @@ namespace RoastMyCode
         }
         
         /// <summary>
+        /// Initializes the sound effects functionality
+        /// </summary>
+        private void InitializeSoundEffects()
+        {
+            try
+            {
+                // Initialize the sound effect manager
+                _soundEffectManager = new SoundEffectManager();
+                _soundEffectsEnabled = false;
+                _soundEffectManager.SoundEffectsEnabled = _soundEffectsEnabled;
+                
+                Debug.WriteLine("Sound effects initialized");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error initializing sound effects: {ex.Message}");
+                // Sound effects are optional, so we can continue without them
+            }
+        }
+        
+        /// <summary>
         /// Toggles voice output on/off
         /// </summary>
         private void ToggleVoiceOutput_Click(object? sender, EventArgs e)
@@ -273,6 +298,35 @@ namespace RoastMyCode
             if (!_voiceOutputEnabled && _voiceOutputManager != null)
             {
                 _voiceOutputManager.StopSpeaking();
+            }
+        }
+        
+        /// <summary>
+        /// Toggles sound effects on/off
+        /// </summary>
+        private void ToggleSoundEffects_Click(object? sender, EventArgs e)
+        {
+            if (_soundEffectManager == null) return;
+            
+            _soundEffectsEnabled = !_soundEffectsEnabled;
+            _soundEffectManager.SoundEffectsEnabled = _soundEffectsEnabled;
+            
+            // Update sound icon
+            if (pbSoundIcon != null)
+            {
+                LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? 
+                    (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : 
+                    (_isDarkMode ? "soundlight.png" : "sounddark.png"));
+            }
+            
+            // Provide feedback
+            string message = _soundEffectsEnabled ? "Sound effects enabled" : "Sound effects disabled";
+            Debug.WriteLine(message);
+            
+            // Play a test sound if enabling
+            if (_soundEffectsEnabled && _soundEffectManager != null)
+            {
+                _soundEffectManager.PlaySound("notification");
             }
         }
         
@@ -315,39 +369,75 @@ namespace RoastMyCode
         /// <param name="roastContent">The content of the roast message</param>
         private void SyncWebcamWithRoast(string roastContent)
         {
-            // Determine the appropriate effect based on the roast content
-            string effect = "None";
+            if (_webcamControl == null || !_webcamControl.IsWebcamActive || !_webcamControl.Visible)
+                return;
             
-            // Check for keywords in the roast content to determine severity
+            int severity = DetermineRoastSeverity(roastContent);
+            string effect = "None";
+            switch (severity)
+            {
+                case 1: effect = "Sepia"; break;
+                case 2: effect = "Grayscale"; break;
+                case 3: effect = "Pixelate"; break;
+                case 4: effect = "Invert"; break;
+                case 5: effect = "Clown"; break;
+            }
+            _webcamControl.StartAnimatedEffect(severity, effect);
+            
+            // Play sound effect based on roast severity
+            if (_soundEffectsEnabled && _soundEffectManager != null)
+            {
+                _soundEffectManager.PlayRoastSound(severity);
+            }
+        }
+        
+        /// <summary>
+        /// Determines the severity of a roast message on a scale of 1-5
+        /// </summary>
+        /// <param name="roastContent">The roast message content</param>
+        /// <returns>Severity level from 1 (mild) to 5 (severe)</returns>
+        private int DetermineRoastSeverity(string roastContent)
+        {
             string contentLower = roastContent.ToLower();
             
+            // Check for keywords indicating severity
             if (contentLower.Contains("terrible") || 
                 contentLower.Contains("awful") || 
                 contentLower.Contains("horrible") ||
-                contentLower.Contains("disaster"))
+                contentLower.Contains("disaster") ||
+                contentLower.Contains("catastrophic"))
             {
-                effect = "Clown"; // Severe roast
+                return 5; // Severe roast
             }
             else if (contentLower.Contains("bad") || 
                      contentLower.Contains("poor") || 
-                     contentLower.Contains("fix") ||
-                     contentLower.Contains("improve"))
+                     contentLower.Contains("serious issues") ||
+                     contentLower.Contains("major problems"))
             {
-                effect = "Invert"; // Moderate roast
+                return 4; // Significant issues
+            }
+            else if (contentLower.Contains("fix") || 
+                     contentLower.Contains("improve") || 
+                     contentLower.Contains("issues") ||
+                     contentLower.Contains("problems"))
+            {
+                return 3; // Moderate issues
+            }
+            else if (contentLower.Contains("consider") || 
+                     contentLower.Contains("might want to") || 
+                     contentLower.Contains("could be better"))
+            {
+                return 2; // Minor issues
             }
             else if (contentLower.Contains("good") || 
                      contentLower.Contains("nice") || 
                      contentLower.Contains("well done"))
             {
-                effect = "Sepia"; // Positive feedback
-            }
-            else
-            {
-                effect = "Grayscale"; // Default effect
+                return 1; // Mild roast / positive feedback
             }
             
-            // Show webcam with the determined effect
-            ShowWebcamWithEffect(effect);
+            // Default to moderate severity
+            return 3;
         }
         
         private string DetectLanguage(string fileName, string? content = null)
@@ -859,11 +949,27 @@ namespace RoastMyCode
                     (_isDarkMode ? "voicelight.png" : "voicedark.png"));
             }
             pbVoiceIcon.Click += ToggleVoiceOutput_Click;
+            
+            pbSoundIcon = new PictureBox
+            {
+                Size = new Size(26, 26),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Location = new Point(130, (inputPanelHeight - 26) / 2),
+                Visible = true
+            };
+            LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? 
+                (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : 
+                (_isDarkMode ? "soundlight.png" : "sounddark.png"));
+            pbSoundIcon.Click += ToggleSoundEffects_Click;
 
             leftIconsPanel.Controls.Add(pbUploadIcon);
             leftIconsPanel.Controls.Add(pbCameraIcon);
             leftIconsPanel.Controls.Add(pbMicIcon);
             leftIconsPanel.Controls.Add(pbVoiceIcon);
+            leftIconsPanel.Controls.Add(pbSoundIcon);
             leftIconsPanel.BringToFront();
             
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
@@ -1726,6 +1832,7 @@ namespace RoastMyCode
             if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
             if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
             if (pbUploadIcon != null) LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
+            if (pbSoundIcon != null) LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : (_isDarkMode ? "soundlight.png" : "sounddark.png"));
         }
 
         private void UpdateThemeIcon()
