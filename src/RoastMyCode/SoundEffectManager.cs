@@ -103,7 +103,7 @@ namespace RoastMyCode
             if (!_soundEffectsEnabled)
                 return;
 
-            if (_soundPlayers.TryGetValue(soundName, out SoundPlayer player))
+            if (_soundPlayers.TryGetValue(soundName, out SoundPlayer? player) && player != null)
             {
                 try
                 {

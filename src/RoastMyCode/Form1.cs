@@ -957,7 +957,10 @@ namespace RoastMyCode
                 LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
             }
             
-            pbUploadIcon.Click += PbUploadIcon_Click;
+            if (pbUploadIcon != null)
+            {
+                pbUploadIcon.Click += PbUploadIcon_Click;
+            }
 
             pbCameraIcon = new PictureBox
             {
@@ -999,7 +1002,10 @@ namespace RoastMyCode
                     (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
                     (_isDarkMode ? "voicelight.png" : "voicedark.png"));
             }
-            pbVoiceIcon.Click += ToggleVoiceOutput_Click;
+            if (pbVoiceIcon != null)
+            {
+                pbVoiceIcon.Click += ToggleVoiceOutput_Click;
+            }
             
             pbSoundIcon = new PictureBox
             {
@@ -2002,7 +2008,7 @@ namespace RoastMyCode
             }
         }
 
-        private void PbUploadIcon_Click(object sender, EventArgs e)
+        private void PbUploadIcon_Click(object? sender, EventArgs e)
         {
             // Open file dialog to upload code
             using (OpenFileDialog openFileDialog = new OpenFileDialog())

@@ -74,8 +74,8 @@ namespace RoastMyCode
             btnAnimate.Click += (s, e) => {
                 if (cmbLanguages.SelectedItem != null)
                 {
-                    string newLanguage = cmbLanguages.SelectedItem.ToString();
-                    if (languageDisplay.Language != newLanguage)
+                    string? newLanguage = cmbLanguages.SelectedItem?.ToString();
+                    if (newLanguage != null && languageDisplay.Language != newLanguage)
                     {
                         languageDisplay.Language = newLanguage;
                         languageDisplay.AnimateLanguageChange();

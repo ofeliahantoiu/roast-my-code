@@ -8,18 +8,18 @@ namespace RoastMyCode
     /// <summary>
     /// Test form to demonstrate and test the enhanced animations
     /// </summary>
-    public class AnimationTester : Form
+    public partial class AnimationTester : Form
     {
-        private FlowLayoutPanel _chatPanel;
-        private ComboBox _animationTypeComboBox;
-        private ComboBox _easingTypeComboBox;
-        private ComboBox _roleComboBox;
-        private TrackBar _severityTrackBar;
-        private Button _testButton;
-        private CheckBox _darkModeCheckBox;
-        private WebcamControl _webcamControl;
-        private Label _severityLabel;
-        private TextBox _messageTextBox;
+        private FlowLayoutPanel _chatPanel = null!;
+        private ComboBox _animationTypeComboBox = null!;
+        private ComboBox _easingTypeComboBox = null!;
+        private ComboBox _roleComboBox = null!;
+        private TrackBar _severityTrackBar = null!;
+        private Button _testButton = null!;
+        private CheckBox _darkModeCheckBox = null!;
+        private WebcamControl _webcamControl = null!;
+        private Label _severityLabel = null!;
+        private TextBox _messageTextBox = null!;
         
         public AnimationTester()
         {
@@ -188,11 +188,11 @@ namespace RoastMyCode
             _roleComboBox.SelectedIndex = 1;
         }
         
-        private void TestButton_Click(object sender, EventArgs e)
+        private void TestButton_Click(object? sender, EventArgs e)
         {
-            string animationType = _animationTypeComboBox.SelectedItem.ToString();
-            string easingType = _easingTypeComboBox.SelectedItem.ToString();
-            string role = _roleComboBox.SelectedItem.ToString();
+            string animationType = _animationTypeComboBox.SelectedItem?.ToString() ?? "FadeIn";
+            string easingType = _easingTypeComboBox.SelectedItem?.ToString() ?? "EaseOutQuad";
+            string role = _roleComboBox.SelectedItem?.ToString() ?? "assistant";
             bool isDarkMode = _darkModeCheckBox.Checked;
             int severity = _severityTrackBar.Value;
             string message = _messageTextBox.Text;
@@ -236,7 +236,7 @@ namespace RoastMyCode
             }
         }
         
-        private void DarkMode_CheckedChanged(object sender, EventArgs e)
+        private void DarkMode_CheckedChanged(object? sender, EventArgs e)
         {
             bool isDarkMode = _darkModeCheckBox.Checked;
             
@@ -257,7 +257,7 @@ namespace RoastMyCode
             }
         }
         
-        private void SeverityTrackBar_ValueChanged(object sender, EventArgs e)
+        private void SeverityTrackBar_ValueChanged(object? sender, EventArgs e)
         {
             _severityLabel.Text = $"Current: {_severityTrackBar.Value}";
         }

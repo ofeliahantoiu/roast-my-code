@@ -69,7 +69,7 @@ namespace RoastMyCode
         /// <summary>
         /// Handles animation timer ticks to update the animation progress
         /// </summary>
-        private void AnimationTimer_Tick(object sender, EventArgs e)
+        private void AnimationTimer_Tick(object? sender, EventArgs e)
         {
             _animationProgress += (float)AnimationInterval / AnimationDuration;
             

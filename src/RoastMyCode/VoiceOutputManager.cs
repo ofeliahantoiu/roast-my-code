@@ -11,17 +11,17 @@ namespace RoastMyCode
     /// </summary>
     public class VoiceOutputManager : IDisposable
     {
-        private SpeechSynthesizer _synthesizer;
+        private SpeechSynthesizer? _synthesizer;
         private bool _isInitialized = false;
         private bool _isSpeaking = false;
         private float _volume = 100; // 0-100
         private float _rate = 0; // -10 to 10
-        private string _selectedVoice = null;
+        private string? _selectedVoice = null;
         private List<string> _availableVoices = new List<string>();
         
-        public event EventHandler<SpeakStartedEventArgs> SpeakStarted;
-        public event EventHandler<SpeakCompletedEventArgs> SpeakCompleted;
-        public event EventHandler<SpeakProgressEventArgs> SpeakProgress;
+        public event EventHandler<SpeakStartedEventArgs>? SpeakStarted;
+        public event EventHandler<SpeakCompletedEventArgs>? SpeakCompleted;
+        public event EventHandler<SpeakProgressEventArgs>? SpeakProgress;
         
         public bool IsInitialized => _isInitialized;
         public bool IsSpeaking => _isSpeaking;
@@ -53,7 +53,7 @@ namespace RoastMyCode
         
         public string SelectedVoice
         {
-            get => _selectedVoice;
+            get => _selectedVoice ?? string.Empty;
             set
             {
                 if (_availableVoices.Contains(value))
@@ -142,7 +142,7 @@ namespace RoastMyCode
                 // Cancel current speech if higher priority
                 if (_isSpeaking && priority == SpeechPriority.High)
                 {
-                    _synthesizer.SpeakAsyncCancelAll();
+                    _synthesizer?.SpeakAsyncCancelAll();
                 }
                 
                 // Speak asynchronously
@@ -150,7 +150,7 @@ namespace RoastMyCode
                 {
                     if (priority == SpeechPriority.High || !_isSpeaking)
                     {
-                        _synthesizer.SpeakAsync(text);
+                        _synthesizer?.SpeakAsync(text);
                     }
                 });
             }
@@ -171,7 +171,7 @@ namespace RoastMyCode
                 
             try
             {
-                _synthesizer.Speak(text);
+                _synthesizer?.Speak(text);
             }
             catch (Exception ex)
             {
@@ -186,7 +186,7 @@ namespace RoastMyCode
         {
             if (_isInitialized && _isSpeaking)
             {
-                _synthesizer.SpeakAsyncCancelAll();
+                _synthesizer?.SpeakAsyncCancelAll();
                 _isSpeaking = false;
             }
         }
@@ -198,7 +198,7 @@ namespace RoastMyCode
         {
             if (_isInitialized && _isSpeaking)
             {
-                _synthesizer.Pause();
+                _synthesizer?.Pause();
             }
         }
         
@@ -209,7 +209,7 @@ namespace RoastMyCode
         {
             if (_isInitialized)
             {
-                _synthesizer.Resume();
+                _synthesizer?.Resume();
             }
         }
         
@@ -218,7 +218,7 @@ namespace RoastMyCode
             if (_synthesizer != null)
             {
                 _synthesizer.SpeakAsyncCancelAll();
-                _synthesizer.Dispose();
+                _synthesizer!.Dispose();
                 _synthesizer = null;
             }
             _isInitialized = false;
