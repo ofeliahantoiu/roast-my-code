@@ -36,12 +36,14 @@ namespace RoastMyCode
         // Animation properties
         private System.Windows.Forms.Timer? _animationTimer;
         private float _animationIntensity = 0.0f;
+        private float _animationMaxIntensity = 0.7f; // Maximum intensity of the effect (0.0-1.0)
         private bool _animationIncreasing = true;
         private int _animationSpeed = 50; // milliseconds
         private float _animationStep = 0.05f;
         private int _animationDuration = 3000; // milliseconds
         private DateTime _animationStartTime;
         private bool _isAnimating = false;
+        private bool _animationPeakReached = false; // Tracks if animation has reached its peak
         private int _roastSeverity = 1; // 1-5 scale, 5 being most severe
         
         // Events
@@ -150,7 +152,7 @@ namespace RoastMyCode
             _statusLabel.Visible = false;
         }
         
-        private void InitializeWebcam()
+        public void InitializeWebcam()
         {
             try
             {
@@ -294,32 +296,77 @@ namespace RoastMyCode
         {
             if (!_isAnimating) return;
             
+            // Calculate elapsed time and progress
+            double elapsed = (DateTime.Now - _animationStartTime).TotalMilliseconds;
+            double progress = Math.Min(elapsed / _animationDuration, 1.0);
+            
             // Check if animation duration has elapsed
-            if ((DateTime.Now - _animationStartTime).TotalMilliseconds > _animationDuration)
+            if (progress >= 1.0)
             {
                 StopAnimation();
                 return;
             }
             
-            // Update animation intensity
-            if (_animationIncreasing)
+            // Apply different animation patterns based on roast severity
+            switch (_roastSeverity)
             {
-                _animationIntensity += _animationStep;
-                if (_animationIntensity >= 1.0f)
-                {
-                    _animationIntensity = 1.0f;
-                    _animationIncreasing = false;
-                }
+                case 1: // Mild - simple sine wave
+                    _animationIntensity = (float)(_animationMaxIntensity * Math.Sin(progress * Math.PI * 2));
+                    break;
+                    
+                case 2: // Medium - gradual increase then decrease
+                    if (progress < 0.5)
+                        _animationIntensity = (float)(_animationMaxIntensity * (progress / 0.5));
+                    else
+                        _animationIntensity = (float)(_animationMaxIntensity * (1 - ((progress - 0.5) / 0.5)));
+                    break;
+                    
+                case 3: // Strong - pulsing effect
+                    _animationIntensity = (float)(_animationMaxIntensity * 0.5 * (1 + Math.Sin(progress * Math.PI * 6)));
+                    break;
+                    
+                case 4: // Very strong - quick rise, slow fall
+                    if (!_animationPeakReached && progress > 0.3)
+                    {
+                        _animationPeakReached = true;
+                    }
+                    
+                    if (!_animationPeakReached)
+                        _animationIntensity = (float)(_animationMaxIntensity * (progress / 0.3));
+                    else
+                        _animationIntensity = (float)(_animationMaxIntensity * (1 - ((progress - 0.3) / 0.7)));
+                    break;
+                    
+                case 5: // Extreme - chaotic effect
+                    _animationIntensity = (float)(_animationMaxIntensity * 
+                        (0.7 + 0.3 * Math.Sin(progress * Math.PI * 10) * 
+                         Math.Cos(progress * Math.PI * 5)));
+                    break;
+                    
+                default: // Fallback to simple oscillation
+                    if (_animationIncreasing)
+                    {
+                        _animationIntensity += _animationStep;
+                        if (_animationIntensity >= _animationMaxIntensity)
+                        {
+                            _animationIntensity = _animationMaxIntensity;
+                            _animationIncreasing = false;
+                        }
+                    }
+                    else
+                    {
+                        _animationIntensity -= _animationStep;
+                        if (_animationIntensity <= 0.0f)
+                        {
+                            _animationIntensity = 0.0f;
+                            _animationIncreasing = true;
+                        }
+                    }
+                    break;
             }
-            else
-            {
-                _animationIntensity -= _animationStep;
-                if (_animationIntensity <= 0.0f)
-                {
-                    _animationIntensity = 0.0f;
-                    _animationIncreasing = true;
-                }
-            }
+            
+            // Ensure intensity stays within bounds
+            _animationIntensity = Math.Clamp(_animationIntensity, 0.0f, 1.0f);
         }
         
         /// <summary>
@@ -334,20 +381,54 @@ namespace RoastMyCode
             
             // Configure animation based on severity
             _animationStep = 0.05f * _roastSeverity / 3.0f;
-            _animationDuration = 3000 + (_roastSeverity * 1000);
+            
+            // Adjust animation duration and intensity based on severity
+            switch (_roastSeverity)
+            {
+                case 1: // Mild
+                    _animationDuration = 3000;
+                    _animationMaxIntensity = 0.3f;
+                    break;
+                case 2: // Medium
+                    _animationDuration = 4000;
+                    _animationMaxIntensity = 0.5f;
+                    break;
+                case 3: // Strong
+                    _animationDuration = 5000;
+                    _animationMaxIntensity = 0.7f;
+                    break;
+                case 4: // Very strong
+                    _animationDuration = 6000;
+                    _animationMaxIntensity = 0.85f;
+                    break;
+                case 5: // Extreme
+                    _animationDuration = 7000;
+                    _animationMaxIntensity = 1.0f;
+                    break;
+                default:
+                    _animationDuration = 3000;
+                    _animationMaxIntensity = 0.3f;
+                    break;
+            }
             
             // Initialize animation state
             _animationIntensity = 0.0f;
             _animationIncreasing = true;
             _isAnimating = true;
             _animationStartTime = DateTime.Now;
+            _animationPeakReached = false;
             
             // Start the animation timer
             InitializeAnimationTimer();
             if (_animationTimer != null && !_animationTimer.Enabled)
             {
-                _animationTimer.Start();
+                _animationTimer.Stop();
             }
+            
+            _isAnimating = false;
+            _animationIntensity = 0.0f;
+            _animationPeakReached = false;
+            _currentEffect = "None";
         }
         
         /// <summary>
@@ -360,8 +441,17 @@ namespace RoastMyCode
                 _animationTimer.Stop();
             }
             
-            _isAnimating = false;
+            // Reset animation state
             _animationIntensity = 0.0f;
+            _animationIncreasing = true;
+            _isAnimating = false;
+            _animationPeakReached = false;
+            
+            // Reset effect
+            _currentEffect = "None";
+            
+            // Force redraw
+            Invalidate();
         }
         
         /// <summary>
@@ -674,6 +764,7 @@ namespace RoastMyCode
     public class WebcamPermissionEventArgs : EventArgs
     {
         public bool IsPermissionGranted { get; }
+        public bool HasPermission { get { return IsPermissionGranted; } }
         
         public WebcamPermissionEventArgs(bool isPermissionGranted)
         {

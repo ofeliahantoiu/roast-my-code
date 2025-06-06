@@ -10,6 +10,8 @@
     <UseWPF>true</UseWPF>
     <!-- Suppress package compatibility warnings for AForge libraries -->
     <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <!-- Suppress TFM support build warnings for System.Speech -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
 
   <ItemGroup>

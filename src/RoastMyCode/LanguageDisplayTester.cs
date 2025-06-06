@@ -84,13 +84,6 @@ namespace RoastMyCode
             };
             this.Controls.Add(btnAnimate);
         }
-        
-        [STAThread]
-        public static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new LanguageDisplayTester());
-        }
+        // Main method removed to avoid multiple entry point error
     }
 }

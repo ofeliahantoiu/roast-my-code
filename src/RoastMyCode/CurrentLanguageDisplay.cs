@@ -16,7 +16,7 @@ namespace RoastMyCode
         private bool _isDarkMode = true;
         private bool _isAnimating = false;
         private float _animationProgress = 0;
-        private Timer _animationTimer;
+        private System.Windows.Forms.Timer _animationTimer;
         
         // Animation properties
         private const int AnimationDuration = 500; // milliseconds
@@ -59,7 +59,7 @@ namespace RoastMyCode
             BackColor = Color.Transparent;
             
             // Initialize animation timer
-            _animationTimer = new Timer
+            _animationTimer = new System.Windows.Forms.Timer
             {
                 Interval = AnimationInterval
             };

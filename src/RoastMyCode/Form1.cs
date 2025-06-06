@@ -76,6 +76,7 @@ namespace RoastMyCode
         // Panel fields are declared in Form1.Designer.cs
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
+        private PictureBox pbThemeIcon = null!;
         private ComboBox cmbFontStyle = null!;
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
@@ -502,12 +503,22 @@ namespace RoastMyCode
             return "Unknown";
         }
 
+        /// <summary>
+        /// Shows the animation tester form
+        /// </summary>
+        private void ShowAnimationTester()
+        {
+            AnimationTester tester = new AnimationTester();
+            tester.Show();
+        }
+        
         private void InitializeModernUI()
         {
             // Load theme preference if available
             try
             {
-                _isDarkMode = Properties.Settings.Default.IsDarkMode;
+                // Use configuration instead of Properties.Settings
+                _isDarkMode = _configuration.GetValue<bool>("AppSettings:IsDarkMode", true);
             }
             catch (Exception ex)
             {
@@ -638,6 +649,23 @@ namespace RoastMyCode
                 IsDarkMode = _isDarkMode
             };
             topPanel.Controls.Add(languageDisplay);
+            
+            // Add animation tester button to the top panel
+            Button animationTesterButton = new Button
+            {
+                Text = "Animation Tester",
+                Size = new Size(140, 30),
+                Location = new Point(10, 10),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            animationTesterButton.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
+            animationTesterButton.Click += (s, e) => ShowAnimationTester();
+            topPanel.Controls.Add(animationTesterButton);
 
             FlowLayoutPanel leftControlsPanel = new FlowLayoutPanel
             {
@@ -1417,6 +1445,9 @@ namespace RoastMyCode
             if (pbLogo != null && lblTitle != null)
             {
                 lblTitle.Location = new Point(pbLogo.Right + lblTitle.Margin.Left, (pbLogo.Height - lblTitle.Height) / 2);
+            }
+        }
+        
         private void UpdateFont()
         {
             string fontName = ThemeManager.Typography.PrimaryFontFamily;
@@ -1508,9 +1539,10 @@ namespace RoastMyCode
                 chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
         }
 
-        private void AddChatMessage(string message, string role)
+        private async void AddChatMessage(string message, string role)
         {
-            // Detect if the message contains code
+            string animationType = "FadeIn";
+            string easingType = "EaseOutQuad";
             bool containsCode = message.Contains("```") || 
                               (message.Contains("{") && message.Contains("}")) || 
                               (message.Contains("def ") && message.Contains(":"));
@@ -1521,7 +1553,6 @@ namespace RoastMyCode
             // Create appropriate bubble type based on content and role
             Control bubble;
             bool useAnimation = role == "assistant"; // Only animate assistant messages
-            string animationType = "FadeIn";
             
             // Use voice output for assistant messages if enabled
             if (role == "assistant" && _voiceOutputEnabled && _voiceOutputManager != null)
@@ -1530,23 +1561,46 @@ namespace RoastMyCode
                 string speechText = ExtractTextForSpeech(message);
                 if (!string.IsNullOrEmpty(speechText))
                 {
-                    _voiceOutputManager.SpeakAsync(speechText);
+                    await _voiceOutputManager.SpeakAsync(speechText);
                 }
             }
             
-            // Determine animation type based on message content
+            // Determine animation type and easing based on message content and roast severity
             if (role == "assistant")
             {
-                // Use different animation types based on message content or roast severity
-                if (message.Contains("terrible") || message.Contains("awful") || 
-                    message.Contains("worst") || message.Contains("garbage"))
+                // Calculate roast severity
+                int severity = DetermineRoastSeverity(message);
+                
+                // Choose animation type based on severity
+                switch (severity)
                 {
-                    animationType = "SlideIn"; // More dramatic for severe roasts
+                    case 1: // Mild roast
+                        animationType = "FadeIn";
+                        easingType = "EaseOutQuad";
+                        break;
+                    case 2: // Medium roast
+                        animationType = "FadeSlideIn";
+                        easingType = "EaseOutCubic";
+                        break;
+                    case 3: // Strong roast
+                        animationType = "SlideIn";
+                        easingType = "EaseOutBack";
+                        break;
+                    case 4: // Very strong roast
+                        animationType = "BounceIn";
+                        easingType = "EaseOutBounce";
+                        break;
+                    case 5: // Extreme roast
+                        animationType = "PopIn";
+                        easingType = "EaseInOutCubic";
+                        break;
+                    default:
+                        animationType = "FadeIn";
+                        break;
                 }
-                else if (message.Length > 200)
-                {
-                    animationType = "GrowIn"; // For longer messages
-                }
+                
+                // Sync webcam with roast severity
+                SyncWebcamWithRoast(message);
             }
             
             if (containsCode && !string.IsNullOrEmpty(language))
@@ -1572,7 +1626,8 @@ namespace RoastMyCode
                     MessageText = message,
                     Role = role,
                     AnimationType = animationType,
-                    AnimationDuration = 800, // Longer duration for more visible effect
+                    EasingType = easingType, // Use the selected easing type
+                    AnimationDuration = role == "assistant" ? 1000 : 800, // Longer duration for assistant messages
                     AutoSize = true,
                     Width = (int)(chatAreaPanel.Width * 0.70),
                     Font = _currentFont,
@@ -1947,6 +2002,45 @@ namespace RoastMyCode
             }
         }
 
+        private void PbUploadIcon_Click(object sender, EventArgs e)
+        {
+            // Open file dialog to upload code
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "Code files|*.cs;*.js;*.html;*.css;*.py;*.java;*.cpp;*.h;*.rb;*.php;*.go;*.ts;*.swift|All files|*.*";
+                openFileDialog.Title = "Select a code file to upload";
+                
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        string fileContent = File.ReadAllText(openFileDialog.FileName);
+                        string fileName = Path.GetFileName(openFileDialog.FileName);
+                        string extension = Path.GetExtension(openFileDialog.FileName).ToLowerInvariant();
+                        
+                        // Set the code in the editor
+                        rtInput.Text = fileContent;
+                        
+                        // Update UI to show the file name - use title instead of a label
+                        this.Text = $"Roast My Code - {fileName}";
+                        
+                        // Detect language from extension
+                        string detectedLanguage = _languageMap.ContainsKey(extension) ? _languageMap[extension] : "Unknown";
+                        
+                        // Apply syntax highlighting
+                        if (rtInput is SyntaxHighlightingTextBox syntaxBox)
+                        {
+                            syntaxBox.Language = detectedLanguage;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error loading file: {ex.Message}", "File Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        
         private void ToggleTheme()
         {
             _isDarkMode = !_isDarkMode;
@@ -1956,8 +2050,30 @@ namespace RoastMyCode
             // Save theme preference
             try
             {
-                Properties.Settings.Default.IsDarkMode = _isDarkMode;
-                Properties.Settings.Default.Save();
+                // Use a file-based approach instead of Properties.Settings
+                // This is a simplified implementation - in a real app, you'd use IOptions pattern
+                var appSettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                var json = File.ReadAllText(appSettingsPath);
+                var jsonObj = System.Text.Json.JsonDocument.Parse(json);
+                var jsonWriter = new System.Text.Json.Utf8JsonWriter(File.Create(appSettingsPath));
+                jsonWriter.WriteStartObject();
+                
+                // Copy existing settings
+                foreach (var prop in jsonObj.RootElement.EnumerateObject())
+                {
+                    if (prop.Name != "AppSettings")
+                    {
+                        prop.WriteTo(jsonWriter);
+                    }
+                }
+                
+                // Write updated AppSettings
+                jsonWriter.WriteStartObject("AppSettings");
+                jsonWriter.WriteBoolean("IsDarkMode", _isDarkMode);
+                jsonWriter.WriteEndObject();
+                
+                jsonWriter.WriteEndObject();
+                jsonWriter.Dispose();
             }
             catch (Exception ex)
             {
