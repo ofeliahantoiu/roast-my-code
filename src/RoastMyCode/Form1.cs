@@ -68,25 +68,19 @@ namespace RoastMyCode
             ["readme"] = "Readme",
             ["license"] = "License"
         };
-        
-        // Panel fields are declared in Form1.Designer.cs
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
-        private PictureBox pbThemeIcon = null!;
         private ComboBox cmbFontStyle = null!;
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
         private Panel titleLogoPanel = null!;
-        private SyntaxHighlightingTextBox rtInput = null!;
+        private RichTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
         private PictureBox? pbMicIcon;
-        private PictureBox? pbUploadIcon;
-        private PictureBox? pbVoiceIcon;
-        private PictureBox? pbSoundIcon;
+        private PictureBox? pbUploadIcon = null!;
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
-        private CurrentLanguageDisplay languageDisplay = null!;
 
 
         public Form1(IConfiguration configuration, IServiceProvider serviceProvider)
@@ -112,17 +106,6 @@ namespace RoastMyCode
                         .ToArray();
                 }
                 
-                InitializeComponent();
-                InitializeModernUI();
-                ApplyTheme();
-                
-                // Initialize webcam, voice output, and sound effects
-                InitializeWebcam();
-                InitializeVoiceOutput();
-                InitializeSoundEffects();
-                
-                LoadConversationHistory();
-                
                 if (_fileUploadOptions.MaxFileSizeMB <= 0)
                 {
                     _fileUploadOptions.MaxFileSizeMB = 10; 
@@ -140,7 +123,11 @@ namespace RoastMyCode
                     Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
                 });
 
-                // This is a duplicate initialization block that should be removed
+                InitializeComponent(); 
+                InitializeModernUI();
+                ApplyTheme();
+
+                LoadConversationHistory();
             }
             catch (Exception ex)
             {
@@ -148,307 +135,6 @@ namespace RoastMyCode
                 MessageBox.Show(errorMessage, "Initialization Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw; 
             }
-        }
-        
-        /// <summary>
-        /// Initializes the webcam functionality
-        /// </summary>
-        private void InitializeWebcam()
-        {
-            try
-            {
-                // Create webcam control
-                _webcamControl = new WebcamControl
-                {
-                    Size = new Size(320, 240),
-                    Location = new Point((this.ClientSize.Width - 320) / 2, (this.ClientSize.Height - 240) / 2),
-                    Anchor = AnchorStyles.None,
-                    Visible = false,
-                    IsDarkMode = _isDarkMode
-                };
-                
-                // Add webcam control to form (initially hidden)
-                this.Controls.Add(_webcamControl);
-                _webcamControl.BringToFront();
-                
-                // Subscribe to webcam permission events
-                _webcamControl.WebcamPermissionChanged += WebcamControl_WebcamPermissionChanged;
-                
-                Debug.WriteLine("Webcam functionality initialized");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error initializing webcam: {ex.Message}");
-                // Don't show error to user - webcam is optional
-            }
-        }
-        
-        /// <summary>
-        /// Handles webcam permission change events
-        /// </summary>
-        private void WebcamControl_WebcamPermissionChanged(object? sender, WebcamPermissionEventArgs e)
-        {
-            // Update UI based on webcam permission status
-            if (e.HasPermission)
-            {
-                Debug.WriteLine("Webcam permission granted");
-                // Update camera icon to indicate webcam is active
-                if (pbCameraIcon != null)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
-                }
-            }
-            else
-            {
-                Debug.WriteLine("Webcam permission denied or webcam stopped");
-                // Update camera icon to indicate webcam is inactive
-                if (pbCameraIcon != null)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-                }
-                
-                // Disable webcam functionality
-                _webcamEnabled = false;
-            }
-        }
-        
-        private void ToggleWebcam_Click(object? sender, EventArgs e)
-        {
-            if (_webcamControl == null) return;
-            
-            _webcamEnabled = !_webcamEnabled;
-            
-            if (_webcamEnabled)
-            {
-                // Start webcam with default effect
-                _webcamControl.StartWebcam();
-                ShowWebcamWithEffect("None");
-                
-                // Update camera icon
-                if (pbCameraIcon != null)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "camera_active_light.png" : "camera_active_dark.png");
-                }
-            }
-            else
-            {
-                // Hide webcam
-                HideWebcam();
-                
-                // Reset camera icon
-                if (pbCameraIcon != null)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Initializes the voice output functionality
-        /// </summary>
-        private void InitializeVoiceOutput()
-        {
-            try
-            {
-                // Initialize the voice output manager
-                _voiceOutputManager = new VoiceOutputManager();
-                _voiceOutputEnabled = false;
-                
-                Debug.WriteLine($"Voice output initialized with {_voiceOutputManager.AvailableVoices.Count} available voices");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error initializing voice output: {ex.Message}");
-                // Voice output is optional, so we can continue without it
-            }
-        }
-        
-        /// <summary>
-        /// Initializes the sound effects functionality
-        /// </summary>
-        private void InitializeSoundEffects()
-        {
-            try
-            {
-                // Initialize the sound effect manager
-                _soundEffectManager = new SoundEffectManager();
-                _soundEffectsEnabled = false;
-                _soundEffectManager.SoundEffectsEnabled = _soundEffectsEnabled;
-                
-                Debug.WriteLine("Sound effects initialized");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error initializing sound effects: {ex.Message}");
-                // Sound effects are optional, so we can continue without them
-            }
-        }
-        
-        /// <summary>
-        /// Toggles voice output on/off
-        /// </summary>
-        private void ToggleVoiceOutput_Click(object? sender, EventArgs e)
-        {
-            if (_voiceOutputManager == null) return;
-            
-            _voiceOutputEnabled = !_voiceOutputEnabled;
-            
-            // Update voice icon
-            if (pbVoiceIcon != null)
-            {
-                LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
-                    (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
-                    (_isDarkMode ? "voicelight.png" : "voicedark.png"));
-            }
-            
-            // Provide feedback
-            string message = _voiceOutputEnabled ? "Voice output enabled" : "Voice output disabled";
-            Debug.WriteLine(message);
-            
-            // Stop any current speech if disabling
-            if (!_voiceOutputEnabled && _voiceOutputManager != null)
-            {
-                _voiceOutputManager.StopSpeaking();
-            }
-        }
-        
-        /// <summary>
-        /// Toggles sound effects on/off
-        /// </summary>
-        private void ToggleSoundEffects_Click(object? sender, EventArgs e)
-        {
-            if (_soundEffectManager == null) return;
-            
-            _soundEffectsEnabled = !_soundEffectsEnabled;
-            _soundEffectManager.SoundEffectsEnabled = _soundEffectsEnabled;
-            
-            // Update sound icon
-            if (pbSoundIcon != null)
-            {
-                LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? 
-                    (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : 
-                    (_isDarkMode ? "soundlight.png" : "sounddark.png"));
-            }
-            
-            // Provide feedback
-            string message = _soundEffectsEnabled ? "Sound effects enabled" : "Sound effects disabled";
-            Debug.WriteLine(message);
-            
-            // Play a test sound if enabling
-            if (_soundEffectsEnabled && _soundEffectManager != null)
-            {
-                _soundEffectManager.PlaySound("notification");
-            }
-        }
-        
-        /// <summary>
-        /// Shows the webcam with the specified effect
-        /// </summary>
-        /// <param name="effect">The visual effect to apply</param>
-        private void ShowWebcamWithEffect(string effect)
-        {
-            if (_webcamControl == null || !_webcamEnabled) return;
-            
-            // Show webcam control
-            _webcamControl.Visible = true;
-            _webcamControl.BringToFront();
-            
-            // Apply the specified effect
-            _webcamControl.CurrentEffect = effect;
-            
-            // Start the webcam if it's not already active
-            if (!_webcamControl.IsWebcamActive)
-            {
-                _webcamControl.StartWebcam();
-            }
-        }
-        
-        /// <summary>
-        /// Hides the webcam
-        /// </summary>
-        private void HideWebcam()
-        {
-            if (_webcamControl != null)
-            {
-                _webcamControl.Visible = false;
-            }
-        }
-        
-        /// <summary>
-        /// Syncs the webcam effect with the roast result based on roast severity
-        /// </summary>
-        /// <param name="roastContent">The content of the roast message</param>
-        private void SyncWebcamWithRoast(string roastContent)
-        {
-            if (_webcamControl == null || !_webcamControl.IsWebcamActive || !_webcamControl.Visible)
-                return;
-            
-            int severity = DetermineRoastSeverity(roastContent);
-            string effect = "None";
-            switch (severity)
-            {
-                case 1: effect = "Sepia"; break;
-                case 2: effect = "Grayscale"; break;
-                case 3: effect = "Pixelate"; break;
-                case 4: effect = "Invert"; break;
-                case 5: effect = "Clown"; break;
-            }
-            _webcamControl.StartAnimatedEffect(severity, effect);
-            
-            // Play sound effect based on roast severity
-            if (_soundEffectsEnabled && _soundEffectManager != null)
-            {
-                _soundEffectManager.PlayRoastSound(severity);
-            }
-        }
-        
-        /// <summary>
-        /// Determines the severity of a roast message on a scale of 1-5
-        /// </summary>
-        /// <param name="roastContent">The roast message content</param>
-        /// <returns>Severity level from 1 (mild) to 5 (severe)</returns>
-        private int DetermineRoastSeverity(string roastContent)
-        {
-            string contentLower = roastContent.ToLower();
-            
-            // Check for keywords indicating severity
-            if (contentLower.Contains("terrible") || 
-                contentLower.Contains("awful") || 
-                contentLower.Contains("horrible") ||
-                contentLower.Contains("disaster") ||
-                contentLower.Contains("catastrophic"))
-            {
-                return 5; // Severe roast
-            }
-            else if (contentLower.Contains("bad") || 
-                     contentLower.Contains("poor") || 
-                     contentLower.Contains("serious issues") ||
-                     contentLower.Contains("major problems"))
-            {
-                return 4; // Significant issues
-            }
-            else if (contentLower.Contains("fix") || 
-                     contentLower.Contains("improve") || 
-                     contentLower.Contains("issues") ||
-                     contentLower.Contains("problems"))
-            {
-                return 3; // Moderate issues
-            }
-            else if (contentLower.Contains("consider") || 
-                     contentLower.Contains("might want to") || 
-                     contentLower.Contains("could be better"))
-            {
-                return 2; // Minor issues
-            }
-            else if (contentLower.Contains("good") || 
-                     contentLower.Contains("nice") || 
-                     contentLower.Contains("well done"))
-            {
-                return 1; // Mild roast / positive feedback
-            }
-            
-            // Default to moderate severity
-            return 3;
         }
         
         private string DetectLanguage(string fileName, string? content = null)
@@ -501,29 +187,8 @@ namespace RoastMyCode
             return "Unknown";
         }
 
-        /// <summary>
-        /// Shows the animation tester form
-        /// </summary>
-        private void ShowAnimationTester()
-        {
-            AnimationTester tester = new AnimationTester();
-            tester.Show();
-        }
-        
         private void InitializeModernUI()
         {
-            // Load theme preference if available
-            try
-            {
-                // Use configuration instead of Properties.Settings
-                _isDarkMode = _configuration.GetValue<bool>("AppSettings:IsDarkMode", true);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading theme preference: {ex.Message}");
-                _isDarkMode = true; // Default to dark mode
-            }
-            
             this.Text = "Roast My Code";
             this.Size = new Size(1200, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -637,33 +302,6 @@ namespace RoastMyCode
                      ((topPanel.Height - titleLogoPanel.Height) / 2) + verticalOffset
                  );
              };
-
-            // Add language display to the top right corner
-            languageDisplay = new CurrentLanguageDisplay
-            {
-                Size = new Size(200, 80),
-                Location = new Point(this.ClientSize.Width - 220, 10),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                IsDarkMode = _isDarkMode
-            };
-            topPanel.Controls.Add(languageDisplay);
-            
-            // Add animation tester button to the top panel
-            Button animationTesterButton = new Button
-            {
-                Text = "Animation Tester",
-                Size = new Size(140, 30),
-                Location = new Point(10, 10),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9),
-                Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            animationTesterButton.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
-            animationTesterButton.Click += (s, e) => ShowAnimationTester();
-            topPanel.Controls.Add(animationTesterButton);
 
             FlowLayoutPanel leftControlsPanel = new FlowLayoutPanel
             {
@@ -950,15 +588,8 @@ namespace RoastMyCode
                 Location = new Point(10, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
-            if (pbUploadIcon != null)
-            {
-                LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
-            }
-            
-            if (pbUploadIcon != null)
-            {
-                pbUploadIcon.Click += PbUploadIcon_Click;
-            }
+            LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
+            pbUploadIcon.Click += PbCameraIcon_Click;
 
             pbCameraIcon = new PictureBox
             {
@@ -971,7 +602,6 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-            pbCameraIcon.Click += ToggleWebcam_Click;
 
             pbMicIcon = new PictureBox
             {
@@ -989,26 +619,21 @@ namespace RoastMyCode
             leftIconsPanel.Controls.Add(pbUploadIcon);
             leftIconsPanel.Controls.Add(pbCameraIcon);
             leftIconsPanel.Controls.Add(pbMicIcon);
-            leftIconsPanel.Controls.Add(pbVoiceIcon);
-            leftIconsPanel.Controls.Add(pbSoundIcon);
             leftIconsPanel.BringToFront();
             
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
 
-            rtInput = new SyntaxHighlightingTextBox
+            rtInput = new RichTextBox
             {
                 Width = inputPanelWidth - 120,
                 Height = inputPanelHeight - 10,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                Font = new Font("Consolas", 10),
+                Font = new Font("Segoe UI", 10),
                 Padding = new Padding(10, 5, 10, 5),
                 Location = new Point(110, 5),
-                Text = "Type your message here...",
-                IsDarkMode = _isDarkMode,
-                HighlightingEnabled = true,
-                CornerRadius = 5
+                Text = "Type your message here..."
             };
 
             rtInput.GotFocus += (s, e) => {
@@ -1098,15 +723,6 @@ namespace RoastMyCode
 
         private void LoadImageFromAssets(PictureBox pictureBox, string imageName)
         {
-            // Check if we need to create an active camera icon dynamically
-            if (imageName == "camera_active_light.png" || imageName == "camera_active_dark.png")
-            {
-                string baseIconName = imageName == "camera_active_light.png" ? "cameralight.png" : "cameradark.png";
-                CreateActiveIcon(pictureBox, baseIconName);
-                return;
-            }
-            
-            // Regular image loading
             string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
             string assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
             string projectDirectory = Directory.GetParent(assemblyDirectory!)!.Parent!.Parent!.FullName; 
@@ -1117,8 +733,8 @@ namespace RoastMyCode
                 try
                 {
                     pictureBox.Image = Image.FromFile(assetsPath);
-                    this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
-                    System.Diagnostics.Debug.WriteLine($"Successfully loaded image: {assetsPath}");
+                     this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
+                     System.Diagnostics.Debug.WriteLine($"Successfully loaded image: {assetsPath}");
                 }
                 catch (Exception ex)
                 {
@@ -1130,52 +746,6 @@ namespace RoastMyCode
             {
                 System.Diagnostics.Debug.WriteLine($"Image file not found at: {assetsPath}");
                 MessageBox.Show($"Image file not found at: {assetsPath}", "Image Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-        
-        /// <summary>
-        /// Creates an active camera icon by adding a red indicator to the base icon
-        /// </summary>
-        private void CreateActiveIcon(PictureBox pictureBox, string baseIconName)
-        {
-            try
-            {
-                string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                string assemblyDirectory = Path.GetDirectoryName(assemblyLocation)!;
-                string projectDirectory = Directory.GetParent(assemblyDirectory!)!.Parent!.Parent!.FullName; 
-                string assetsPath = Path.Combine(projectDirectory, "assets", baseIconName);
-                
-                if (File.Exists(assetsPath))
-                {
-                    using (Bitmap baseIcon = new Bitmap(Image.FromFile(assetsPath)))
-                    {
-                        // Create a copy of the base icon
-                        Bitmap activeIcon = new Bitmap(baseIcon.Width, baseIcon.Height);
-                        
-                        // Draw the base icon and add a red dot indicator
-                        using (Graphics g = Graphics.FromImage(activeIcon))
-                        {
-                            g.DrawImage(baseIcon, 0, 0);
-                            g.FillEllipse(Brushes.Red, baseIcon.Width - 8, 0, 8, 8);
-                        }
-                        
-                        // Set the modified icon
-                        if (pictureBox.Image != null)
-                        {
-                            pictureBox.Image.Dispose();
-                        }
-                        pictureBox.Image = activeIcon;
-                        this.FormClosed += (s, e) => { if (pictureBox.Image != null) { pictureBox.Image.Dispose(); } };
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"Base icon not found at: {assetsPath}");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error creating active icon from {baseIconName}: {ex.Message}");
             }
         }
 
@@ -1222,35 +792,17 @@ namespace RoastMyCode
 
         private void ApplyTheme()
         {
-            // Get colors from ThemeManager based on current theme
-            Color textColor = _isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
-            Color backColor = _isDarkMode ? ThemeManager.DarkTheme.Background : ThemeManager.LightTheme.Background;
-            Color surfaceColor = _isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
-            Color inputBackColor = _isDarkMode ? ThemeManager.DarkTheme.InputBackground : ThemeManager.LightTheme.InputBackground;
-            Color buttonBackColor = _isDarkMode ? ThemeManager.DarkTheme.ButtonBackground : ThemeManager.LightTheme.ButtonBackground;
-            Color borderColor = _isDarkMode ? ThemeManager.DarkTheme.Border : ThemeManager.LightTheme.Border;
+            Color textColor = _isDarkMode ? Color.White : Color.Black;
+            Color backColor = _isDarkMode ? Color.FromArgb(45, 45, 45) : Color.White;
+            Color editorBackColor = _isDarkMode ? Color.FromArgb(50, 50, 50) : Color.White;
+            Color buttonBackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240);
 
-            // Apply theme to form
             this.BackColor = backColor;
             this.ForeColor = textColor;
 
-            // Apply theme to all controls
             foreach (Control control in this.Controls)
             {
-                ApplyThemeToControl(control, _isDarkMode, textColor, backColor, inputBackColor, buttonBackColor, borderColor, surfaceColor);
-            }
-
-            // Update language display theme
-            if (languageDisplay != null)
-            {
-                languageDisplay.IsDarkMode = _isDarkMode;
-                languageDisplay.Invalidate(); // Force redraw
-            }
-
-            // Update webcam control theme if available
-            if (_webcamControl != null)
-            {
-                _webcamControl.IsDarkMode = _isDarkMode;
+                ApplyThemeToControl(control, _isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
             }
 
             UpdateLogoIcon();
@@ -1262,167 +814,93 @@ namespace RoastMyCode
             LoadImageFromAssets(pbLogo, _isDarkMode ? "twinklewhite.png" : "twinkleblack.png");
         }
 
-        private void ApplyThemeToControl(Control control, bool isDarkMode, Color textColor, Color backColor, Color inputBackColor, Color buttonBackColor, Color borderColor, Color surfaceColor)
+        private void ApplyThemeToControl(Control control, bool isDarkMode, Color textColor, Color backColor, Color editorBackColor, Color buttonBackColor)
         {
-            // Special handling for title label
             if (control is Label titleLabel && titleLabel.Text == "Roast My Code")
             {
-                titleLabel.ForeColor = isDarkMode ? ThemeManager.DarkTheme.Primary : ThemeManager.LightTheme.Primary;
-                titleLabel.Font = ThemeManager.Typography.Heading;
+                titleLabel.ForeColor = textColor;
                 return;
             }
 
-            // Special handling for chat bubbles
             if (control is ChatMessageBubble bubble)
             {
                 if (bubble.Role == "user")
                 {
-                    bubble.BackColor = isDarkMode ? ThemeManager.DarkTheme.SurfaceVariant : ThemeManager.LightTheme.SurfaceVariant;
-                    bubble.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
+                    bubble.BackColor = Color.FromArgb(70, 70, 70);
+                    bubble.ForeColor = Color.White;
                 }
                 else
                 {
-                    bubble.BackColor = isDarkMode ? ThemeManager.DarkTheme.Surface : ThemeManager.LightTheme.Surface;
-                    bubble.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextPrimary : ThemeManager.LightTheme.TextPrimary;
+                    bubble.ForeColor = isDarkMode ? Color.White : Color.Black;
                 }
                 bubble.Invalidate();
                 return;
             }
 
-            // Default styling for most controls
             control.BackColor = backColor;
             control.ForeColor = textColor;
 
-            // Type-specific styling
             if (control is ComboBox comboBox)
             {
-                comboBox.BackColor = inputBackColor;
+                comboBox.BackColor = isDarkMode ? Color.FromArgb(45, 45, 48) : Color.FromArgb(240, 240, 240);
                 comboBox.ForeColor = textColor;
                 comboBox.FlatStyle = FlatStyle.Flat;
                 comboBox.Invalidate();
             }
             else if (control is TextBox textBox)
             {
-                textBox.BackColor = inputBackColor;
-                textBox.ForeColor = textColor;
-                textBox.BorderStyle = BorderStyle.FixedSingle;
+                if (!string.IsNullOrWhiteSpace(rtInput.Text))
+                {
+                    textBox.ForeColor = textColor;
+                }
+                else
+                {
+                    textBox.BackColor = editorBackColor;
+                    textBox.ForeColor = textColor;
+                }
                 textBox.Invalidate();
             }
             else if (control is RichTextBox richTextBox)
             {
-                richTextBox.BackColor = inputBackColor;
-                richTextBox.ForeColor = textColor;
-                
-                if (richTextBox is RoundedRichTextBox rtInput)
-                {
-                    rtInput.BorderColor = borderColor;
-                    rtInput.BorderWidth = 1;
-                    rtInput.CornerRadius = 8; // More modern rounded corners
-                    
-                    if (rtInput.Text == "Type your message here...")
-                    {
-                        rtInput.ForeColor = isDarkMode ? ThemeManager.DarkTheme.TextSecondary : ThemeManager.LightTheme.TextSecondary;
-                    }
-                }
-                
-                richTextBox.Invalidate();
-            }
-            else if (control is Button button)
-            {
-                button.BackColor = buttonBackColor;
-                button.FlatStyle = FlatStyle.Flat;
-                button.FlatAppearance.BorderColor = borderColor;
-                button.FlatAppearance.BorderSize = 1;
-                button.Font = ThemeManager.Typography.Body;
-                button.Invalidate();
+                 richTextBox.BackColor = isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240); 
+                 
+                 if (richTextBox is RoundedRichTextBox rtInput)
+                 {
+                     rtInput.BorderColor = isDarkMode ? Color.FromArgb(100, 100, 100) : Color.FromArgb(180, 180, 180);
+                     rtInput.BorderWidth = 1;
+                     
+                     if (rtInput.Text != "Type your message here...")
+                     {
+                         rtInput.ForeColor = isDarkMode ? Color.White : Color.Black;
+                     }
+                 }
+                 else
+                 {
+                     richTextBox.ForeColor = textColor;
+                 }
+                 
+                 richTextBox.Invalidate();
             }
             else if (control is CheckBox checkBox)
             {
                 checkBox.ForeColor = textColor;
-                checkBox.Font = ThemeManager.Typography.Body;
                 checkBox.Invalidate();
             }
             else if (control is Label label)
             {
-                if (label.Text != "Roast My Code")
-                {
-                    label.ForeColor = textColor;
-                    
-                    // Apply appropriate typography based on label role
-                    if (label.Tag != null && label.Tag.ToString() == "heading")
-                    {
-                        label.Font = ThemeManager.Typography.Subheading;
-                    }
-                    else if (label.Tag != null && label.Tag.ToString() == "small")
-                    {
-                        label.Font = ThemeManager.Typography.Small;
-                    }
-                    else
-                    {
-                        label.Font = ThemeManager.Typography.Body;
-                    }
-                    
-                    label.Invalidate();
-                }
+                 if (label.Text != "Roast My Code")
+                 {
+                     label.ForeColor = textColor;
+                     label.Invalidate();
+                 }
             }
-            else if (control is Panel panel)
+             else if (control is PictureBox pb)
             {
-                // Apply different styling to panels based on their role
-                if (panel == topPanel)
-                {
-                    panel.BackColor = surfaceColor;
-                }
-                else if (panel == bottomPanel)
-                {
-                    panel.BackColor = surfaceColor;
-                }
-                else if (panel == chatAreaPanel)
-                {
-                    panel.BackColor = backColor;
-                }
-                else if (panel == inputPanel)
-                {
-                    panel.BackColor = inputBackColor;
-                    panel.BorderStyle = BorderStyle.None;
-                }
-                else
-                {
-                    panel.BackColor = backColor;
-                }
+                pb.BackColor = backColor;
             }
-            else if (control is PictureBox pb)
-            {
-                pb.BackColor = Color.Transparent;
-                
-                // Update icons based on theme and state
-                if (pb == pbVoiceIcon)
-                {
-                    LoadImageFromAssets(pbVoiceIcon, _voiceOutputEnabled ? 
-                        (_isDarkMode ? "voice_active_light.png" : "voice_active_dark.png") : 
-                        (_isDarkMode ? "voicelight.png" : "voicedark.png"));
-                }
-                else if (pb == pbSoundIcon)
-                {
-                    LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? 
-                        (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : 
-                        (_isDarkMode ? "soundlight.png" : "sounddark.png"));
-                }
-                else if (pb == pbCameraIcon)
-                {
-                    LoadImageFromAssets(pbCameraIcon, _webcamEnabled ? 
-                        (_isDarkMode ? "camera_active_light.png" : "camera_active_dark.png") : 
-                        (_isDarkMode ? "cameralight.png" : "cameradark.png"));
-                }
-                else if (pb == pbThemeIcon)
-                {
-                    LoadImageFromAssets(pbThemeIcon, _isDarkMode ? "sunlight.png" : "moondark.png");
-                }
-            }
-            
-            // Apply theme to child controls recursively
             foreach (Control child in control.Controls)
             {
-                ApplyThemeToControl(child, isDarkMode, textColor, backColor, inputBackColor, buttonBackColor, borderColor, surfaceColor);
+                ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
             }
         }
 
@@ -1448,36 +926,32 @@ namespace RoastMyCode
                 lblTitle.Location = new Point(pbLogo.Right + lblTitle.Margin.Left, (pbLogo.Height - lblTitle.Height) / 2);
             }
         }
-        
+
         private void UpdateFont()
         {
-            string fontName = ThemeManager.Typography.PrimaryFontFamily;
-            float fontSize = ThemeManager.Typography.BodySize;
-            
-            if (cmbFontStyle.SelectedIndex > 0)
+            if (cmbFontStyle.SelectedIndex > 0 || cmbFontSize.SelectedIndex > 0)
             {
-                fontName = cmbFontStyle.SelectedItem.ToString() ?? ThemeManager.Typography.PrimaryFontFamily;
-            }
-            
-            if (cmbFontSize.SelectedIndex > 0)
-            {
-                if (float.TryParse(cmbFontSize.SelectedItem.ToString(), out float size))
+                string fontFamily = cmbFontStyle.SelectedIndex > 0 ? 
+                                    cmbFontStyle.SelectedItem.ToString()! : 
+                                    _currentFont.FontFamily.Name;
+
+                float fontSize = cmbFontSize.SelectedIndex > 0 ? 
+                                 float.Parse(cmbFontSize.SelectedItem.ToString()!) : 
+                                 _currentFont.Size;
+
+                if (fontSize <= 0) fontSize = 8;
+
+                _currentFont = new Font(fontFamily, fontSize);
+
+                if (chatAreaPanel != null)
                 {
-                    fontSize = size;
+                    ApplyFontToControl(chatAreaPanel, _currentFont);
                 }
-            }
-            
-            _currentFont = new Font(fontName, fontSize);
-            
-            foreach (Control control in this.Controls)
-            {
-                ApplyFontToControl(control, _currentFont);
-            }
-            
-            if (rtInput != null)
-            {
-                rtInput.Font = _currentFont;
-                rtInput.PerformLayout();
+                if (rtInput != null)
+                {
+                    rtInput.Font = _currentFont;
+                    rtInput.PerformLayout();
+                }
             }
         }
 
@@ -1492,15 +966,9 @@ namespace RoastMyCode
             {
                 string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
                 string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
-                
+
                 AddChatMessage(aiResponse, "assistant");
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
-                
-                // Sync webcam effect with the roast result if webcam is enabled
-                if (_webcamEnabled && _webcamControl != null)
-                {
-                    SyncWebcamWithRoast(aiResponse);
-                }
             }
             catch (Exception ex)
             {
@@ -1515,23 +983,8 @@ namespace RoastMyCode
 
         private void SendMessage()
         {
-            string message = rtInput.Text;
-            
-            // Detect language from the message content
-            string detectedLanguage = ExtractLanguageFromMessage(message);
-            
-            // If language was detected, update the language display
-            if (!string.IsNullOrEmpty(detectedLanguage))
-            {
-                // Update the language display immediately
-                UpdateLanguageDisplay(detectedLanguage);
-                
-                // Apply syntax highlighting to the input box for next input
-                rtInput.Language = detectedLanguage;
-            }
-            
-            AddChatMessage(message, "user");
-            _conversationHistory.Add(new ChatMessage { Content = message, Role = "user" });
+            AddChatMessage(rtInput.Text, "user");
+            _conversationHistory.Add(new ChatMessage { Content = rtInput.Text, Role = "user" });
             rtInput.Text = "Type your message here...";
             rtInput.ForeColor = Color.FromArgb(150, 150, 150);
             rtInput.SelectionStart = 0;
@@ -1540,384 +993,23 @@ namespace RoastMyCode
                 chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
         }
 
-        private async void AddChatMessage(string message, string role)
+        private void AddChatMessage(string message, string role)
         {
-            string animationType = "FadeIn";
-            string easingType = "EaseOutQuad";
-            bool containsCode = message.Contains("```") || 
-                              (message.Contains("{") && message.Contains("}")) || 
-                              (message.Contains("def ") && message.Contains(":"));
-            
-            // Extract language from the message
-            string language = ExtractLanguageFromMessage(message);
-            
-            // Create appropriate bubble type based on content and role
-            Control bubble;
-            bool useAnimation = role == "assistant"; // Only animate assistant messages
-            
-            // Use voice output for assistant messages if enabled
-            if (role == "assistant" && _voiceOutputEnabled && _voiceOutputManager != null)
+            ChatMessageBubble bubble = new ChatMessageBubble
             {
-                // Extract text content without code blocks for speech
-                string speechText = ExtractTextForSpeech(message);
-                if (!string.IsNullOrEmpty(speechText))
-                {
-                    await _voiceOutputManager.SpeakAsync(speechText);
-                }
-            }
-            
-            // Determine animation type and easing based on message content and roast severity
-            if (role == "assistant")
-            {
-                // Calculate roast severity
-                int severity = DetermineRoastSeverity(message);
-                
-                // Choose animation type based on severity
-                switch (severity)
-                {
-                    case 1: // Mild roast
-                        animationType = "FadeIn";
-                        easingType = "EaseOutQuad";
-                        break;
-                    case 2: // Medium roast
-                        animationType = "FadeSlideIn";
-                        easingType = "EaseOutCubic";
-                        break;
-                    case 3: // Strong roast
-                        animationType = "SlideIn";
-                        easingType = "EaseOutBack";
-                        break;
-                    case 4: // Very strong roast
-                        animationType = "BounceIn";
-                        easingType = "EaseOutBounce";
-                        break;
-                    case 5: // Extreme roast
-                        animationType = "PopIn";
-                        easingType = "EaseInOutCubic";
-                        break;
-                    default:
-                        animationType = "FadeIn";
-                        break;
-                }
-                
-                // Sync webcam with roast severity
-                SyncWebcamWithRoast(message);
-            }
-            
-            if (containsCode && !string.IsNullOrEmpty(language))
-            {
-                // Use syntax highlighted bubble for code
-                SyntaxHighlightedChatBubble codeBubble = new SyntaxHighlightedChatBubble
-                {
-                    Message = message,
-                    Role = role,
-                    Language = language,
-                    Width = (int)(chatAreaPanel.Width * 0.70),
-                    MaximumSize = new Size((int)(chatAreaPanel.Width * 0.70), 0),
-                    Margin = new Padding(10),
-                    IsDarkMode = _isDarkMode
-                };
-                bubble = codeBubble;
-            }
-            else if (useAnimation)
-            {
-                // Use animated chat bubble for assistant messages
-                AnimatedChatBubble animatedBubble = new AnimatedChatBubble
-                {
-                    MessageText = message,
-                    Role = role,
-                    AnimationType = animationType,
-                    EasingType = easingType, // Use the selected easing type
-                    AnimationDuration = role == "assistant" ? 1000 : 800, // Longer duration for assistant messages
-                    AutoSize = true,
-                    Width = (int)(chatAreaPanel.Width * 0.70),
-                    Font = _currentFont,
-                    Margin = new Padding(10, 5, 10, 5),
-                    IsDarkMode = _isDarkMode
-                };
-                bubble = animatedBubble;
-            }
-            else
-            {
-                // Use regular chat bubble for text
-                ChatMessageBubble textBubble = new ChatMessageBubble
-                {
-                    MessageText = message,
-                    Role = role,
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    Font = _currentFont,
-                    Margin = new Padding(10, 5, 10, 5)
-                };
-                bubble = textBubble;
-            }
+                MessageText = message,
+                Role = role,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Font = _currentFont,
+                Margin = new Padding(10, 5, 10, 5)
+            };
 
             chatAreaPanel.Controls.Add(bubble);
-            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1);
-
-            if (role == "user" && !string.IsNullOrEmpty(language))
-            {
-                // Add language badge to chat message
-                LanguageBadge languageBadge = new LanguageBadge
-                {
-                    Language = language,
-                    Location = new Point(bubble.Left, bubble.Top - 20)
-                };
-                chatAreaPanel.Controls.Add(languageBadge);
-                chatAreaPanel.Controls.SetChildIndex(languageBadge, chatAreaPanel.Controls.Count - 2);
-                
-                // Update the language display in the corner
-                UpdateLanguageDisplay(language);
-                
-                // Update the input box language for better syntax highlighting on next input
-                rtInput.Language = language;
-                
-                Debug.WriteLine($"User message with language: {language}");
-            }
-            else if (role == "user" && message.Contains("{") && message.Contains("}") && message.Length > 20)
-            {
-                // If message contains code-like content but no specific language was detected
-                // Set a default language based on content patterns
-                if (message.Contains("public") || message.Contains("private") || message.Contains("class"))
-                {
-                    UpdateLanguageDisplay("C#");
-                    rtInput.Language = "C#";
-                    Debug.WriteLine("Set default language to C#");
-                }
-            }
-            else if (role != "user")
-            {
-                // For non-user messages (AI or system)
-                string detectedLanguage = ExtractLanguageFromMessage(message);
-                if (!string.IsNullOrEmpty(detectedLanguage))
-                {
-                    // Update the language display in the corner
-                    UpdateLanguageDisplay(detectedLanguage);
-                    Debug.WriteLine($"Non-user message with language: {detectedLanguage}");
-                }
-            }
-
+            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
             PositionChatBubbles();
+
             chatAreaPanel.ScrollControlIntoView(bubble);
-            
-            // Start animation for animated bubbles
-            if (bubble is AnimatedChatBubble bubbleToAnimate)
-            {
-                bubbleToAnimate.StartAnimation();
-            }
-        }
-
-        private string ExtractLanguageFromMessage(string message)
-        {
-            // Check for markdown code blocks with language specifier
-            var markdownMatch = Regex.Match(message, @"```([\w#+]*)[\s\S]*?```");
-            if (markdownMatch.Success && markdownMatch.Groups.Count > 1 && !string.IsNullOrWhiteSpace(markdownMatch.Groups[1].Value))
-            {
-                string lang = markdownMatch.Groups[1].Value.ToLower().Trim();
-                if (!string.IsNullOrEmpty(lang))
-                {
-                    string normalizedLang = NormalizeLanguageName(lang);
-                    // Apply syntax highlighting to the input box
-                    if (!string.IsNullOrEmpty(normalizedLang) && rtInput != null)
-                    {
-                        rtInput.Language = normalizedLang;
-                        rtInput.ApplySyntaxHighlighting();
-                    }
-                    return normalizedLang;
-                }
-            }
-            
-            // Check for file extensions in the message
-            var extensionMatch = Regex.Match(message, @"\.(cs|js|py|java|html|css|php|rb|go|ts|cpp|c|h|json|xml|md|sql)\b");
-            if (extensionMatch.Success)
-            {
-                string ext = extensionMatch.Groups[1].Value.ToLower();
-                string detectedLang = ExtensionToLanguage(ext);
-                // Apply syntax highlighting to the input box
-                if (!string.IsNullOrEmpty(detectedLang) && rtInput != null)
-                {
-                    rtInput.Language = detectedLang;
-                    rtInput.ApplySyntaxHighlighting();
-                }
-                return detectedLang;
-            }
-            
-            // Heuristic detection based on content
-            string language = string.Empty;
-            try
-            {
-                if (message.Contains("public class") || message.Contains("namespace") || message.Contains("using System"))
-                    language = "C#";
-                else if (message.Contains("function ") || message.Contains("const ") || message.Contains("let ") || message.Contains("var ") && message.Contains("{"))
-                    language = "JavaScript";
-                else if (message.Contains("def ") && message.Contains(":") || message.Contains("import ") && message.Contains("from "))
-                    language = "Python";
-                else if (message.Contains("public static void main") || message.Contains("public class") && message.Contains("{"))
-                    language = "Java";
-                
-                // Apply syntax highlighting to the input box if language was detected
-                if (!string.IsNullOrEmpty(language) && rtInput != null)
-                {
-                    rtInput.Language = language;
-                    rtInput.ApplySyntaxHighlighting();
-                }
-            }
-            catch (Exception ex) 
-            { 
-                Debug.WriteLine($"Error extracting language: {ex.Message}");
-            }
-            return language;
-        }
-        
-        /// <summary>
-        /// Extracts plain text from a message by removing code blocks for speech synthesis
-        /// </summary>
-        /// <param name="message">The message containing potential code blocks</param>
-        /// <returns>Plain text suitable for speech synthesis</returns>
-        private string ExtractTextForSpeech(string message)
-        {
-            if (string.IsNullOrEmpty(message))
-                return string.Empty;
-                
-            // Remove markdown code blocks
-            string result = Regex.Replace(message, @"```[\s\S]*?```", "[code omitted]");
-            
-            // Remove inline code blocks
-            result = Regex.Replace(result, @"`[^`]+`", "[code reference]");
-            
-            // Remove URLs
-            result = Regex.Replace(result, @"https?://\S+", "[link]");
-            
-            // Replace multiple newlines with a single one
-            result = Regex.Replace(result, @"\n{2,}", "\n");
-            
-            return result;
-        }
-        
-        /// <summary>
-        /// Normalizes language names to a standard format
-        /// </summary>
-        private string NormalizeLanguageName(string language)
-        {
-            if (string.IsNullOrEmpty(language)) return "";
-            
-            language = language.ToLower().Trim();
-            
-            switch (language)
-            {
-                case "cs":
-                case "csharp":
-                case "c#":
-                    return "C#";
-                    
-                case "js":
-                case "javascript":
-                case "node":
-                case "nodejs":
-                    return "JavaScript";
-                    
-                case "py":
-                case "python":
-                    return "Python";
-                    
-                case "java":
-                    return "Java";
-                    
-                case "html":
-                    return "HTML";
-                    
-                case "css":
-                    return "CSS";
-                    
-                case "php":
-                    return "PHP";
-                    
-                default:
-                    // Try to capitalize the first letter for other languages
-                    if (language.Length > 0)
-                    {
-                        return char.ToUpper(language[0]) + language.Substring(1);
-                    }
-                    return language;
-            }
-        }
-        
-        /// <summary>
-        /// Converts file extensions to language names
-        /// </summary>
-        private string ExtensionToLanguage(string extension)
-        {
-            switch (extension.ToLower())
-            {
-                case "cs": return "C#";
-                case "js": return "JavaScript";
-                case "py": return "Python";
-                case "java": return "Java";
-                case "html": return "HTML";
-                case "css": return "CSS";
-                case "php": return "PHP";
-                case "rb": return "Ruby";
-                case "go": return "Go";
-                case "ts": return "TypeScript";
-                case "cpp": return "C++";
-                case "c": return "C";
-                case "h": return "C";
-                case "json": return "JSON";
-                case "xml": return "XML";
-                case "md": return "Markdown";
-                case "sql": return "SQL";
-                default: return "";
-            }
-        }
-
-        /// <summary>
-        /// Updates the language display control with the detected programming language
-        /// </summary>
-        /// <param name="language">The detected programming language name</param>
-        private void UpdateLanguageDisplay(string language)
-        {
-            Debug.WriteLine($"UpdateLanguageDisplay called with language: {language}");
-            if (languageDisplay != null)
-            {
-                Debug.WriteLine("languageDisplay control exists");
-                if (!string.IsNullOrEmpty(language))
-                {
-                    // Only update if language has changed
-                    if (languageDisplay.Language != language)
-                    {
-                        // Update the language
-                        languageDisplay.Language = language;
-                        
-                        // Make sure the language display is visible
-                        languageDisplay.Visible = true;
-                        
-                        // Animate the language display to draw attention
-                        AnimateLanguageDisplay();
-                        
-                        Debug.WriteLine($"Updated language display to: {language}");
-                    }
-                }
-                else
-                {
-                    Debug.WriteLine("Language was empty, not updating display");
-                }
-            }
-            else
-            {
-                Debug.WriteLine("languageDisplay control is null");
-            }
-        }
-        
-        /// <summary>
-        /// Animates the language display to draw attention to it
-        /// </summary>
-        private void AnimateLanguageDisplay()
-        {
-            if (languageDisplay == null) return;
-            
-            // Use the built-in animation capabilities of the CurrentLanguageDisplay control
-            // This will trigger the fade and scale animation defined in the control
-            languageDisplay.AnimateLanguageChange();
         }
 
         private void ChatAreaPanel_ControlAdded(object? sender, ControlEventArgs e)
@@ -1931,18 +1023,15 @@ namespace RoastMyCode
             
         private void PositionChatBubbles()
         {
-            if (chatAreaPanel.Controls.Count == 0) return;
-
             int panelWidth = chatAreaPanel.ClientSize.Width;
+            if (panelWidth <= 0) return;
+
             int availableWidth = panelWidth - chatAreaPanel.Padding.Horizontal;
             int desiredBubbleWidth = (int)(availableWidth * 0.70);
             if (desiredBubbleWidth < 100) desiredBubbleWidth = 100;
 
             int currentY = chatAreaPanel.Padding.Top;
-            Dictionary<int, ChatMessageBubble> bubblesByY = new Dictionary<int, ChatMessageBubble>();
-            List<LanguageBadge> badges = new List<LanguageBadge>();
 
-            // First pass: position all chat bubbles
             foreach (Control control in chatAreaPanel.Controls)
             {
                 if (control is ChatMessageBubble bubble)
@@ -1962,29 +1051,10 @@ namespace RoastMyCode
                     }
 
                     bubble.Top = currentY;
-                    bubblesByY[currentY] = bubble;
 
                     currentY += bubble.Height + bubble.Margin.Vertical;
                 }
-                else if (control is LanguageBadge badge)
-                {
-                    badges.Add(badge);
-                }
             }
-
-            // Second pass: position language badges above their corresponding bubbles
-            foreach (var badge in badges)
-            {
-                // Find the nearest bubble below this badge
-                var bubbleY = bubblesByY.Keys.OrderBy(y => y).FirstOrDefault(y => y >= badge.Top);
-                if (bubbleY != 0 && bubblesByY.TryGetValue(bubbleY, out var bubble))
-                {
-                    // Position badge above the bubble
-                    badge.Top = bubble.Top - badge.Height - 5;
-                    badge.Left = bubble.Left + 10;
-                }
-            }
-
             chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + 50);
             chatAreaPanel.Invalidate(true);
 
@@ -2003,89 +1073,15 @@ namespace RoastMyCode
             }
         }
 
-        private void PbUploadIcon_Click(object? sender, EventArgs e)
-        {
-            // Open file dialog to upload code
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Filter = "Code files|*.cs;*.js;*.html;*.css;*.py;*.java;*.cpp;*.h;*.rb;*.php;*.go;*.ts;*.swift|All files|*.*";
-                openFileDialog.Title = "Select a code file to upload";
-                
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        string fileContent = File.ReadAllText(openFileDialog.FileName);
-                        string fileName = Path.GetFileName(openFileDialog.FileName);
-                        string extension = Path.GetExtension(openFileDialog.FileName).ToLowerInvariant();
-                        
-                        // Set the code in the editor
-                        rtInput.Text = fileContent;
-                        
-                        // Update UI to show the file name - use title instead of a label
-                        this.Text = $"Roast My Code - {fileName}";
-                        
-                        // Detect language from extension
-                        string detectedLanguage = _languageMap.ContainsKey(extension) ? _languageMap[extension] : "Unknown";
-                        
-                        // Apply syntax highlighting
-                        if (rtInput is SyntaxHighlightingTextBox syntaxBox)
-                        {
-                            syntaxBox.Language = detectedLanguage;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error loading file: {ex.Message}", "File Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-        
         private void ToggleTheme()
         {
             _isDarkMode = !_isDarkMode;
             ApplyTheme();
             UpdateThemeIcon();
-            
-            // Save theme preference
-            try
-            {
-                // Use a file-based approach instead of Properties.Settings
-                // This is a simplified implementation - in a real app, you'd use IOptions pattern
-                var appSettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-                var json = File.ReadAllText(appSettingsPath);
-                var jsonObj = System.Text.Json.JsonDocument.Parse(json);
-                var jsonWriter = new System.Text.Json.Utf8JsonWriter(File.Create(appSettingsPath));
-                jsonWriter.WriteStartObject();
-                
-                // Copy existing settings
-                foreach (var prop in jsonObj.RootElement.EnumerateObject())
-                {
-                    if (prop.Name != "AppSettings")
-                    {
-                        prop.WriteTo(jsonWriter);
-                    }
-                }
-                
-                // Write updated AppSettings
-                jsonWriter.WriteStartObject("AppSettings");
-                jsonWriter.WriteBoolean("IsDarkMode", _isDarkMode);
-                jsonWriter.WriteEndObject();
-                
-                jsonWriter.WriteEndObject();
-                jsonWriter.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error saving theme preference: {ex.Message}");
-            }
-            
             if (pbSendIcon != null) LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
             if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
             if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
             if (pbUploadIcon != null) LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
-            if (pbSoundIcon != null) LoadImageFromAssets(pbSoundIcon, _soundEffectsEnabled ? (_isDarkMode ? "sound_active_light.png" : "sound_active_dark.png") : (_isDarkMode ? "soundlight.png" : "sounddark.png"));
         }
 
         private void UpdateThemeIcon()
@@ -2443,10 +1439,9 @@ namespace RoastMyCode
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Multiselect = true;
-                    string filter = "Supported Files|*" + string.Join(";", _fileUploadOptions.AllowedExtensions) + 
+                    string filter = "Supported Files|*" + string.Join(";*", _fileUploadOptions.AllowedExtensions) + 
                                  "|ZIP Archives|*.zip|All Files|*.*";
                     openFileDialog.Filter = filter;
-                    string lastDetectedLanguage = string.Empty;
                     openFileDialog.Title = $"Select Files to Upload (Max {_fileUploadOptions.MaxFileSizeMB}MB per file, {_fileUploadOptions.MaxTotalSizeMB}MB total)";
                     openFileDialog.CheckFileExists = true;
                     openFileDialog.CheckPathExists = true;
@@ -2502,12 +1497,10 @@ namespace RoastMyCode
                                     string displayName = Path.GetFileName(fileName);
                                     string language = DetectLanguage(fileName, content);
                                     
-                                    // Store the last detected language for updating the display
-                                    lastDetectedLanguage = language;
-                                    
                                     if (!_uploadedFiles.ContainsKey(displayName))
                                     {
                                         _uploadedFiles[displayName] = content;
+                                        fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
                                     }
                                 }
                             }
@@ -2522,12 +1515,6 @@ namespace RoastMyCode
                             string combinedContent = string.Join("\n\n", fileContents);
                             AddChatMessage(combinedContent, "user");
                             _conversationHistory.Add(new ChatMessage { Content = combinedContent, Role = "user" });
-                            
-                            // Update the language display with the last detected language
-                            if (!string.IsNullOrEmpty(lastDetectedLanguage))
-                            {
-                                UpdateLanguageDisplay(lastDetectedLanguage);
-                            }
                             
                             if (_uploadedFiles.Count > 0)
                             {
@@ -2544,8 +1531,121 @@ namespace RoastMyCode
             }
             catch (Exception ex)
             {
-                AddChatMessage($"Error processing files: {ex.Message}", "system");
+                AddChatMessage($"Error during file upload: {ex.Message}", "system");
+            }
+        }
+
+    }   
+    public class RoundedRichTextBox : RichTextBox
+    {
+        private int cornerRadius = 20;
+        private Color borderColor = Color.Transparent;
+        private int borderWidth = 0;
+
+        public int CornerRadius
+        {
+            get => cornerRadius;
+            set
+            {
+                cornerRadius = value;
+                Invalidate();
+            }
+        }
+
+        public Color BorderColor
+        {
+            get => borderColor;
+            set
+            {
+                borderColor = value;
+                Invalidate();
+            }
+        }
+
+        public int BorderWidth
+        {
+            get => borderWidth;
+            set
+            {
+                borderWidth = value;
+                Invalidate();
+            }
+        }
+
+        public RoundedRichTextBox()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
+                int radius = CornerRadius;
+                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                path.CloseAllFigures();
+
+                this.Region = new Region(path);
+
+                if (borderWidth > 0)
+                {
+                    using (Pen pen = new Pen(BorderColor, BorderWidth))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            Invalidate();
+        }
+
+        public class RoundedPanel : Panel
+        {
+            public int CornerRadius { get; set; } = 18;
+            public Color BorderColor { get; set; } = Color.Gray;
+            public int BorderWidth { get; set; } = 1;
+
+            public RoundedPanel()
+            {
+                this.SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+                this.BackColor = Color.White;
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                base.OnPaint(e);
+                var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+                using (var path = GetRoundedRect(rect, CornerRadius))
+                using (var brush = new SolidBrush(this.BackColor))
+                using (var pen = new Pen(BorderColor, BorderWidth))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+
+            private GraphicsPath GetRoundedRect(Rectangle rect, int radius)
+            {
+                var path = new GraphicsPath();
+                int d = radius * 2;
+                path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                path.CloseFigure();
+                return path;
             }
         }
     }
-}
+}   

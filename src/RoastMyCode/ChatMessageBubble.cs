@@ -9,7 +9,6 @@ namespace RoastMyCode
     {
         private string _messageText = string.Empty;
         private string _role = "assistant";
-        private bool _isDarkMode = true;
 
         public string MessageText
         {
@@ -27,16 +26,6 @@ namespace RoastMyCode
             set
             {
                 _role = value;
-                Invalidate();
-            }
-        }
-        
-        public bool IsDarkMode
-        {
-            get => _isDarkMode;
-            set
-            {
-                _isDarkMode = value;
                 Invalidate();
             }
         }
@@ -105,44 +94,11 @@ namespace RoastMyCode
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            // Colors based on role and dark/light mode
-            Color backColor;
-            Color textColor;
-            Color borderColor;
-            
-            if (_isDarkMode)
-            {
-                // Dark mode colors
-                if (_role == "user")
-                {
-                    backColor = Color.FromArgb(70, 70, 70);  // Dark gray for user
-                    borderColor = Color.FromArgb(90, 90, 90); // Slightly lighter border
-                }
-                else
-                {
-                    backColor = Color.FromArgb(50, 50, 80);  // Dark blue for assistant
-                    borderColor = Color.FromArgb(70, 70, 100); // Slightly lighter border
-                }
-                textColor = Color.White;
-            }
-            else
-            {
-                // Light mode colors
-                if (_role == "user")
-                {
-                    backColor = Color.FromArgb(220, 220, 220); // Light gray for user
-                    borderColor = Color.FromArgb(200, 200, 200); // Slightly darker border
-                }
-                else
-                {
-                    backColor = Color.FromArgb(220, 220, 240); // Light blue for assistant
-                    borderColor = Color.FromArgb(200, 200, 220); // Slightly darker border
-                }
-                textColor = Color.Black;
-            }
-            
+            Color backColor = (_role == "user") ? Color.FromArgb(70, 70, 70) : Color.FromArgb(70, 70, 70);
+            Color textColor = Color.White;
             int cornerRadius = 12;
-            Rectangle bubbleBounds = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+
+            Rectangle bubbleBounds = new Rectangle(0, 0, this.Width, this.Height);
 
             using (GraphicsPath path = new GraphicsPath())
             {
@@ -158,16 +114,9 @@ namespace RoastMyCode
                 path.AddArc(arc, 90, 90); 
                 path.CloseFigure();
 
-                // Fill bubble background
                 using (SolidBrush brush = new SolidBrush(backColor))
                 {
                     g.FillPath(brush, path);
-                }
-                
-                // Draw border
-                using (Pen pen = new Pen(borderColor, 1))
-                {
-                    g.DrawPath(pen, path);
                 }
             }
 
@@ -180,7 +129,7 @@ namespace RoastMyCode
 
             TextFormatFlags textFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.VerticalCenter;
             
-            TextRenderer.DrawText(g, _messageText, Font, textRect, textColor, textFlags);
+            TextRenderer.DrawText(g, _messageText, Font, textRect, Color.White, textFlags);
         }
     }
 }
