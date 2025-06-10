@@ -34,12 +34,16 @@ namespace RoastMyCode
         {
             InitializeComponent();
             AutoSize = true;
-            MinimumSize = new Size(100, 30);
-            Padding = new Padding(12, 8, 12, 8);
-            Margin = new Padding(10, 6, 10, 6);
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            MinimumSize = new Size(100, 40);
+            MaximumSize = new Size(600, 0);
+            Padding = new Padding(15, 10, 15, 10);
+            Margin = new Padding(12, 8, 12, 8);
             Font = new Font("Segoe UI", 12);
             DoubleBuffered = true;
             SetStyle(ControlStyles.ResizeRedraw, true);
+            SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+            SetStyle(ControlStyles.UserPaint, true);
         }
 
         private void InitializeComponent()
@@ -49,25 +53,38 @@ namespace RoastMyCode
             this.ResumeLayout(false);
         }
 
-       protected override void OnLayout(LayoutEventArgs levent)
-{
-    base.OnLayout(levent);
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            base.OnLayout(levent);
 
-    if (Parent == null || string.IsNullOrEmpty(_messageText)) return;
+            if (Parent == null || string.IsNullOrEmpty(_messageText)) return;
 
-    using (Graphics g = CreateGraphics())
-    {
-        TextFormatFlags flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
-        int availableWidth = MaximumSize.Width - Padding.Horizontal;
-        Size proposedSize = new Size(availableWidth, int.MaxValue);
-        Size textSize = TextRenderer.MeasureText(g, _messageText, Font, proposedSize, flags);
+            using (Graphics g = CreateGraphics())
+            {
+                TextFormatFlags flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
+                int availableWidth = MaximumSize.Width - Padding.Horizontal;
+                Size proposedSize = new Size(availableWidth, int.MaxValue);
+                Size textSize = TextRenderer.MeasureText(_messageText, Font, proposedSize, flags);
 
-        this.Height = textSize.Height + Padding.Vertical;
-    }
+                int bubbleWidth = Math.Min(textSize.Width + Padding.Horizontal + 8, MaximumSize.Width);
+                this.Width = bubbleWidth;
+                this.Height = textSize.Height + Padding.Vertical + 8;
 
-    this.Anchor = (_role == "user") ? AnchorStyles.Right : AnchorStyles.Left;
-    Invalidate();
-}
+                if (_role == "user")
+                {
+                    if (Parent != null)
+                    {
+                        this.Left = Parent.ClientSize.Width - this.Width - Margin.Right;
+                    }
+                }
+                else
+                {
+                    this.Left = Margin.Left;
+                }
+
+                Invalidate();
+            }
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -77,7 +94,7 @@ namespace RoastMyCode
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Color backColor = (_role == "user") ? Color.FromArgb(60, 120, 230) : Color.FromArgb(70, 70, 70);
+            Color backColor = (_role == "user") ? Color.FromArgb(70, 70, 70) : Color.FromArgb(70, 70, 70);
             Color textColor = Color.White;
             int cornerRadius = 12;
 
@@ -88,13 +105,13 @@ namespace RoastMyCode
                 int diameter = cornerRadius * 2;
                 Rectangle arc = new Rectangle(bubbleBounds.X, bubbleBounds.Y, diameter, diameter);
 
-                path.AddArc(arc, 180, 90); // Top-left
+                path.AddArc(arc, 180, 90); 
                 arc.X = bubbleBounds.Right - diameter;
-                path.AddArc(arc, 270, 90); // Top-right
+                path.AddArc(arc, 270, 90); 
                 arc.Y = bubbleBounds.Bottom - diameter;
-                path.AddArc(arc, 0, 90); // Bottom-right
+                path.AddArc(arc, 0, 90); 
                 arc.X = bubbleBounds.X;
-                path.AddArc(arc, 90, 90); // Bottom-left
+                path.AddArc(arc, 90, 90); 
                 path.CloseFigure();
 
                 using (SolidBrush brush = new SolidBrush(backColor))
@@ -104,16 +121,15 @@ namespace RoastMyCode
             }
 
             Rectangle textRect = new Rectangle(
-                bubbleBounds.X + Padding.Left,
-                bubbleBounds.Y + Padding.Top,
-                bubbleBounds.Width - Padding.Horizontal,
-                bubbleBounds.Height - Padding.Vertical
+                Padding.Left,
+                Padding.Top,
+                this.Width - Padding.Horizontal,
+                this.Height - Padding.Vertical
             );
 
-            TextFormatFlags textFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.Top;
-            textFlags |= (_role == "user") ? TextFormatFlags.Right : TextFormatFlags.Left;
-
-            TextRenderer.DrawText(g, _messageText, Font, textRect, textColor, textFlags);
+            TextFormatFlags textFlags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.VerticalCenter;
+            
+            TextRenderer.DrawText(g, _messageText, Font, textRect, Color.White, textFlags);
         }
     }
 }
