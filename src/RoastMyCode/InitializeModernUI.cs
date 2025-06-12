@@ -442,6 +442,34 @@ namespace RoastMyCode
                 Location = new Point(110, 5),
                 Text = "Type your message here..."
             };
+            rtInput.KeyDown += async (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
+                    {
+                        SendMessage();
+                        try
+                        {
+                            string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                            string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
+
+                            AddChatMessage(aiResponse, "assistant");
+                            _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                        }
+                        catch (Exception ex)
+                        {
+                            AddChatMessage($"Error: {ex.Message}", "system");
+                        }
+                        finally
+                        {
+                            rtInput.Enabled = true;
+                            pbSendIcon.Enabled = true;
+                        }
+                    }
+                }
+            };
 
             rtInput.GotFocus += (s, e) => {
                 if (rtInput.Text == "Type your message here...")

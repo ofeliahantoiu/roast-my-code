@@ -10,6 +10,28 @@ namespace RoastMyCode
         private int cornerRadius = 20;
         private Color borderColor = Color.Transparent;
         private int borderWidth = 0;
+        private string _placeholderText = string.Empty;
+        private Color _placeholderColor = Color.FromArgb(150, 150, 150);
+
+        public string PlaceholderText
+        {
+            get => _placeholderText;
+            set
+            {
+                _placeholderText = value;
+                Invalidate();
+            }
+        }
+
+        public Color PlaceholderColor
+        {
+            get => _placeholderColor;
+            set
+            {
+                _placeholderColor = value;
+                Invalidate();
+            }
+        }
 
         public int CornerRadius
         {
@@ -55,6 +77,20 @@ namespace RoastMyCode
                     using (Pen pen = new Pen(BorderColor, BorderWidth))
                     {
                         e.Graphics.DrawPath(pen, path);
+                    }
+                }
+
+                // Draw placeholder text if control is empty
+                if (Text.Length == 0 && !Focused && !string.IsNullOrEmpty(_placeholderText))
+                {
+                    using (Brush brush = new SolidBrush(_placeholderColor))
+                    {
+                        SizeF stringSize = e.Graphics.MeasureString(_placeholderText, Font);
+                        PointF location = new PointF(
+                            (Width - stringSize.Width) / 2,
+                            (Height - stringSize.Height) / 2
+                        );
+                        e.Graphics.DrawString(_placeholderText, Font, brush, location);
                     }
                 }
             }

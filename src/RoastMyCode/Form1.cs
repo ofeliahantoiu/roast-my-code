@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Windows.Forms;
 using Microsoft.Extensions.Configuration;
 using RoastMyCode.Services;
+using static RoastMyCode.Services.LanguageDetector;
 
 namespace RoastMyCode
 {
@@ -172,6 +173,35 @@ namespace RoastMyCode
             {
                 pbGradientBackground.Height = this.ClientSize.Height / 2;
                 pbGradientBackground.SendToBack();
+            }
+        }
+
+        private async void rtInput_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
+                {
+                    SendMessage();
+                    try
+                    {
+                        string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                        string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
+
+                        AddChatMessage(aiResponse, "assistant");
+                        _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                    }
+                    catch (Exception ex)
+                    {
+                        AddChatMessage($"Error: {ex.Message}", "system");
+                    }
+                    finally
+                    {
+                        rtInput.Enabled = true;
+                        pbSendIcon.Enabled = true;
+                    }
+                }
             }
         }
 

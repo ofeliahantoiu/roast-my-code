@@ -85,10 +85,7 @@ namespace RoastMyCode
                      rtInput.BorderColor = isDarkMode ? Color.FromArgb(100, 100, 100) : Color.FromArgb(180, 180, 180);
                      rtInput.BorderWidth = 1;
                      
-                     if (rtInput.Text != "Type your message here...")
-                     {
-                         rtInput.ForeColor = isDarkMode ? Color.White : Color.Black;
-                     }
+                     rtInput.ForeColor = isDarkMode ? Color.White : Color.Black;
                  }
                  else
                  {

@@ -9,14 +9,18 @@ namespace RoastMyCode
     {        
         private void SendMessage()
         {
+            // Validate message before sending
+            if (string.IsNullOrWhiteSpace(rtInput.Text)) return;
+
             AddChatMessage(rtInput.Text, "user");
             _conversationHistory.Add(new ChatMessage { Content = rtInput.Text, Role = "user" });
-            rtInput.Text = "Type your message here...";
-            rtInput.ForeColor = Color.FromArgb(150, 150, 150);
-            rtInput.SelectionStart = 0;
+            rtInput.Text = string.Empty;
 
-            if (chatAreaPanel.VerticalScroll.Visible)
-                chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
+            // Scroll to bottom using BeginInvoke to avoid layout lag
+            this.BeginInvoke(new Action(() => {
+                if (chatAreaPanel.Controls.Count > 0)
+                    chatAreaPanel.ScrollControlIntoView(chatAreaPanel.Controls[chatAreaPanel.Controls.Count - 1]);
+            }));
         }
 
         private void AddChatMessage(string message, string role)
