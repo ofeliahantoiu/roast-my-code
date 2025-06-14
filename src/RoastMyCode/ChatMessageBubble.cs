@@ -113,14 +113,20 @@ namespace RoastMyCode
             _menuButton = new Button();
             _menuButton.FlatStyle = FlatStyle.Flat;
             _menuButton.FlatAppearance.BorderSize = 0;
-            _menuButton.Size = new Size(20, 20);
-            _menuButton.Text = "⋮"; // Vertical ellipsis
-            _menuButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _menuButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(100, 100, 100);
+            _menuButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(120, 120, 120);
+            _menuButton.Size = new Size(45, 22);
+            _menuButton.Text = "Copy"; // Show Copy text directly
+            _menuButton.Font = new Font("Segoe UI", 8, FontStyle.Regular);
             _menuButton.Cursor = Cursors.Hand;
-            _menuButton.BackColor = Color.FromArgb(80, 80, 80);
+            _menuButton.BackColor = Color.FromArgb(60, 60, 60);
             _menuButton.ForeColor = Color.White;
+            // Add rounded corners effect
+            _menuButton.Region = new Region(CreateRoundedRectangle(_menuButton.Width, _menuButton.Height, 4));
             _menuButton.Click += MenuButton_Click;
             _menuButton.Visible = false; // Initially hidden until positioned
+            _menuButton.MouseEnter += (s, e) => { if (_menuButton != null) _menuButton.ForeColor = Color.FromArgb(220, 220, 220); };
+            _menuButton.MouseLeave += (s, e) => { if (_menuButton != null) _menuButton.ForeColor = Color.White; };
             
             // Create context menu
             _contextMenu = new ContextMenuStrip();
@@ -135,6 +141,17 @@ namespace RoastMyCode
                     this.Parent.Controls.Add(_menuButton);
                     _menuButton.BringToFront();
                     UpdateMenuButtonPosition();
+                    
+                    // Add scroll event handler to hide menu button when scrolling
+                    if (this.Parent is Panel panel)
+                    {
+                        panel.Scroll += (s, args) => {
+                            if (_menuButton != null && _menuButton.Visible)
+                            {
+                                _menuButton.Visible = false;
+                            }
+                        };
+                    }
                 }
             };
         }
@@ -296,6 +313,20 @@ namespace RoastMyCode
             base.OnMouseMove(e);
         }
         
+        /// <summary>
+        /// Creates a rounded rectangle shape for the button
+        /// </summary>
+        private GraphicsPath CreateRoundedRectangle(int width, int height, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            path.AddArc(0, 0, radius * 2, radius * 2, 180, 90);
+            path.AddArc(width - radius * 2, 0, radius * 2, radius * 2, 270, 90);
+            path.AddArc(width - radius * 2, height - radius * 2, radius * 2, radius * 2, 0, 90);
+            path.AddArc(0, height - radius * 2, radius * 2, radius * 2, 90, 90);
+            path.CloseAllFigures();
+            return path;
+        }
+        
         private void UpdateMenuButtonPosition()
         {
             if (_menuButton == null || this.Parent == null) return;
@@ -306,13 +337,13 @@ namespace RoastMyCode
             if (_role == "user")
             {
                 // For user messages (right-aligned), position at the left side outside the bubble
-                _menuButton.Left = bubbleLocation.X - _menuButton.Width - 2;
+                _menuButton.Left = bubbleLocation.X - _menuButton.Width - 5;
                 _menuButton.Top = bubbleLocation.Y + 5;
             }
             else
             {
                 // For assistant/system messages (left-aligned), position at the right side outside the bubble
-                _menuButton.Left = bubbleLocation.X + this.Width + 2;
+                _menuButton.Left = bubbleLocation.X + this.Width + 5;
                 _menuButton.Top = bubbleLocation.Y + 5;
             }
             
@@ -344,10 +375,19 @@ namespace RoastMyCode
         
         private void MenuButton_Click(object? sender, EventArgs e)
         {
-            if (_contextMenu != null && sender is Button button)
+            // Since we now have a direct Copy button, copy the text immediately
+            if (!string.IsNullOrEmpty(_messageText))
             {
-                // Show context menu below the button
-                _contextMenu.Show(button, new Point(0, button.Height));
+                try
+                {
+                    Clipboard.SetText(_messageText);
+                    ShowCopyFeedback();
+                }
+                catch (Exception ex)
+                {
+                    // Handle clipboard access errors silently
+                    System.Diagnostics.Debug.WriteLine($"Clipboard error: {ex.Message}");
+                }
             }
         }
         
@@ -370,9 +410,41 @@ namespace RoastMyCode
         
         private void ShowCopyFeedback()
         {
-            _showCopyFeedback = true;
-            _feedbackStartTime = DateTime.Now;
-            this.Invalidate();
+            // Store original color
+            Color originalColor = _bubbleColor;
+            
+            // Change to feedback color (light green)
+            _bubbleColor = Color.FromArgb(75, 180, 75);
+            this.Invalidate(); // Redraw with new color
+            
+            // Also update the button text to show feedback
+            if (_menuButton != null)
+            {
+                _menuButton.Text = "Copied!";
+                _menuButton.BackColor = Color.FromArgb(60, 150, 60);
+            }
+            
+            // Create a timer to revert back after a short delay
+            System.Windows.Forms.Timer feedbackTimer = new System.Windows.Forms.Timer();
+            feedbackTimer.Interval = 1000; // 1 second
+            feedbackTimer.Tick += (s, e) =>
+            {
+                // Revert to original color
+                _bubbleColor = originalColor;
+                this.Invalidate();
+                
+                // Revert button text and color
+                if (_menuButton != null)
+                {
+                    _menuButton.Text = "Copy";
+                    _menuButton.BackColor = Color.FromArgb(60, 60, 60);
+                }
+                
+                // Clean up timer
+                feedbackTimer.Stop();
+                feedbackTimer.Dispose();
+            };
+            feedbackTimer.Start();
         }
         
         protected override void Dispose(bool disposing)

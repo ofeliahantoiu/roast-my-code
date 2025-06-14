@@ -84,7 +84,20 @@ namespace RoastMyCode
             {
                 if (Tag is RichTextBox rtb)
                 {
-                    UpdateCounts(rtb.Text);
+                    // Check if this is a RoundedRichTextBox with placeholder text
+                    if ((rtb is RoundedRichTextBox roundedRtb && 
+                        !string.IsNullOrEmpty(roundedRtb.PlaceholderText) && 
+                        rtb.Text.Length == 0 && 
+                        !rtb.Focused) ||
+                        rtb.Text == "Type your message here...")
+                    {
+                        // Don't count placeholder text
+                        UpdateCounts("");
+                    }
+                    else
+                    {
+                        UpdateCounts(rtb.Text);
+                    }
                 }
             };
             _updateTimer.Start();
@@ -104,7 +117,18 @@ namespace RoastMyCode
                 if (!_updateTimer.Enabled)
                     _updateTimer.Start();
             };
-            UpdateCounts(textBox.Text);
+            
+            // Don't count initial placeholder text
+            if (textBox is RoundedRichTextBox roundedTextBox && 
+                !string.IsNullOrEmpty(roundedTextBox.PlaceholderText) && 
+                textBox.Text.Length == 0)
+            {
+                UpdateCounts(""); // Use empty string instead of placeholder
+            }
+            else
+            {
+                UpdateCounts(textBox.Text);
+            }
         }
         
         /// <summary>
@@ -113,7 +137,8 @@ namespace RoastMyCode
         /// <param name="text">The text to count</param>
         public void UpdateCounts(string text)
         {
-            if (string.IsNullOrEmpty(text))
+            // Check for empty text or placeholder text
+            if (string.IsNullOrEmpty(text) || text == "Type your message here...")
             {
                 CharacterCount = 0;
                 LineCount = 1;
