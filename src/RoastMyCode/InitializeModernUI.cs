@@ -493,6 +493,20 @@ namespace RoastMyCode
             leftIconsPanel.BringToFront();
             sendButtonPanel.BringToFront();
 
+            // Add text counter display below the input panel
+            textCounter = new TextCounterDisplay
+            {
+                Size = new Size(120, 20),
+                Location = new Point(leftIconsPanel.Width + 5, rtInput.Bottom + 5),
+                Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+                BackColor = Color.Transparent,
+                IsDarkMode = _isDarkMode
+            };
+            
+            // Connect the counter to the rtInput for live updates
+            textCounter.ConnectToTextBox(rtInput);
+            bottomPanel.Controls.Add(textCounter);
+
             rtInput.TextChanged += (s, e) =>
             {
                 if (rtInput.Text.Length > 0 && rtInput.Text != "Type your message here...")

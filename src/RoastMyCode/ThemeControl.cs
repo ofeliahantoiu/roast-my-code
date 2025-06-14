@@ -99,6 +99,12 @@ namespace RoastMyCode
                 checkBox.ForeColor = textColor;
                 checkBox.Invalidate();
             }
+            else if (control is TextCounterDisplay counter)
+            {
+                counter.UpdateTheme(isDarkMode);
+                counter.BackColor = backColor;
+                counter.Invalidate();
+            }
             else if (control is Label label)
             {
                  if (label.Text != "Roast My Code")

@@ -15,7 +15,7 @@ namespace RoastMyCode
         private readonly Color _lightModeTextColor = Color.FromArgb(80, 80, 80);
         private readonly Color _darkModeTextColor = Color.FromArgb(200, 200, 200);
         private bool _isDarkMode = true;
-        private Timer _updateTimer;
+        private System.Windows.Forms.Timer _updateTimer;
         
         public Color TextColor => _isDarkMode ? _darkModeTextColor : _lightModeTextColor;
         
@@ -78,7 +78,7 @@ namespace RoastMyCode
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             
             // Update the display occasionally rather than on every keystroke to avoid flickering
-            _updateTimer = new Timer();
+            _updateTimer = new System.Windows.Forms.Timer();
             _updateTimer.Interval = 200; // Update every 200ms
             _updateTimer.Tick += (s, e) => 
             {
@@ -165,7 +165,6 @@ namespace RoastMyCode
             {
                 _updateTimer?.Stop();
                 _updateTimer?.Dispose();
-                _updateTimer = null;
             }
             base.Dispose(disposing);
         }

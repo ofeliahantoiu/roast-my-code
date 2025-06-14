@@ -12,19 +12,34 @@ namespace RoastMyCode
     {
         private bool _isHovered = false;
         private readonly int _cornerRadius = 6;
-        private readonly Color _normalColor = Color.FromArgb(60, 60, 60);
-        private readonly Color _hoverColor = Color.FromArgb(80, 80, 80);
-        private readonly Color _iconColor = Color.FromArgb(220, 220, 220);
+        private readonly Color _normalColor = Color.FromArgb(100, 100, 100);
+        private readonly Color _hoverColor = Color.FromArgb(130, 130, 130);
+        private readonly Color _iconColor = Color.FromArgb(255, 255, 255);
         private readonly ToolTip _toolTip = new ToolTip();
+        private double _opacity = 1.0;
+        
+        /// <summary>
+        /// Gets or sets the opacity of the control (0.0 to 1.0)
+        /// </summary>
+        public double Opacity
+        {
+            get => _opacity;
+            set
+            {
+                _opacity = Math.Clamp(value, 0.0, 1.0);
+                this.Invalidate();
+            }
+        }
 
-        public event EventHandler CopyClicked;
+        public event EventHandler? CopyClicked;
 
         public CopyButton()
         {
-            Size = new Size(32, 32);
+            Size = new Size(80, 32); // Wider to accommodate text
             Cursor = Cursors.Hand;
             Visible = false; // Initially hidden
             _toolTip.SetToolTip(this, "Copy text");
+            BackColor = Color.Transparent;
 
             // Enable double buffering for smoother rendering
             SetStyle(ControlStyles.OptimizedDoubleBuffer | 
@@ -39,31 +54,41 @@ namespace RoastMyCode
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
+            // Apply opacity to colors
+            Color backgroundColor = _isHovered ? _hoverColor : _normalColor;
+            Color iconColor = _iconColor;
+            Color textColor = _iconColor;
+            
+            if (_opacity < 1.0)
+            {
+                int alpha = (int)(_opacity * 255);
+                backgroundColor = Color.FromArgb(alpha, backgroundColor);
+                iconColor = Color.FromArgb(alpha, iconColor);
+                textColor = Color.FromArgb(alpha, textColor);
+            }
+
             // Draw rounded rectangle background
             using (GraphicsPath path = CreateRoundedRectangle(ClientRectangle, _cornerRadius))
-            using (SolidBrush brush = new SolidBrush(_isHovered ? _hoverColor : _normalColor))
+            using (SolidBrush brush = new SolidBrush(backgroundColor))
             {
                 g.FillPath(brush, path);
             }
 
             // Draw copy icon
-            using (Pen pen = new Pen(_iconColor, 1.5f))
+            using (Pen pen = new Pen(iconColor, 1.5f))
             {
                 // Draw document shape
                 int offset = 8;
-                int width = 16;
-                int height = 16;
-
-                // First document (behind)
-                Rectangle docRect = new Rectangle(
-                    offset - 1, 
-                    offset - 1, 
-                    width, 
-                    height
-                );
-                
-                // Clip the corner
+                int iconSize = 16;
                 int cornerClip = 4;
+                
+                Rectangle docRect = new Rectangle(
+                    offset, 
+                    (Height - iconSize) / 2, 
+                    iconSize, 
+                    iconSize);
+                
+                // Draw the document with a clipped corner
                 using (GraphicsPath docPath = new GraphicsPath())
                 {
                     docPath.AddLine(docRect.X, docRect.Y, docRect.Right - cornerClip, docRect.Y);
@@ -71,7 +96,16 @@ namespace RoastMyCode
                     docPath.AddLine(docRect.Right, docRect.Y + cornerClip, docRect.Right, docRect.Bottom);
                     docPath.AddLine(docRect.Right, docRect.Bottom, docRect.X, docRect.Bottom);
                     docPath.CloseFigure();
-                    g.FillPath(new SolidBrush(_iconColor), docPath);
+                    g.FillPath(new SolidBrush(iconColor), docPath);
+                }
+                
+                // Draw "Copy" text
+                using (Font textFont = new Font("Segoe UI", 9f, FontStyle.Regular))
+                using (SolidBrush textBrush = new SolidBrush(textColor))
+                {
+                    int textX = offset + iconSize + 4;
+                    int textY = (Height - iconSize) / 2;
+                    g.DrawString("Copy", textFont, textBrush, textX, textY);
                 }
             }
         }
@@ -132,7 +166,7 @@ namespace RoastMyCode
             this.Opacity = 0;
             this.Visible = true;
             
-            Timer fadeTimer = new Timer();
+            System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer();
             fadeTimer.Interval = 20;
             fadeTimer.Tick += (s, e) =>
             {
@@ -154,7 +188,7 @@ namespace RoastMyCode
         {
             if (!Visible) return;
             
-            Timer fadeTimer = new Timer();
+            System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer();
             fadeTimer.Interval = 20;
             fadeTimer.Tick += (s, e) =>
             {

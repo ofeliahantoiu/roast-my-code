@@ -39,6 +39,7 @@ namespace RoastMyCode
         private PictureBox pbSendIcon = null!;
         private PictureBox pbGradientBackground = null!;
         private Panel inputPanel = null!;
+        private TextCounterDisplay textCounter = null!;
 
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
