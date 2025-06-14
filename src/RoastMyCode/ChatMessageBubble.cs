@@ -12,6 +12,10 @@ namespace RoastMyCode
         private string _messageText = string.Empty;
         private string _role = "assistant";
         private string _language = "text";
+        private CopyButton _copyButton;
+        private bool _showCopyFeedback = false;
+        private DateTime _feedbackStartTime = DateTime.MinValue;
+        private const int FeedbackDurationMs = 1000; // Show feedback for 1 second
 
         public string MessageText
         {
@@ -48,6 +52,23 @@ namespace RoastMyCode
             SetStyle(ControlStyles.ResizeRedraw, true);
             SetStyle(ControlStyles.AllPaintingInWmPaint, true);
             SetStyle(ControlStyles.UserPaint, true);
+            
+            // Initialize copy button
+            _copyButton = new CopyButton();
+            _copyButton.CopyClicked += CopyButton_CopyClicked;
+            this.Controls.Add(_copyButton);
+            
+            // Set up timer to check for feedback expiration
+            Timer feedbackTimer = new Timer();
+            feedbackTimer.Interval = 100; // Check every 100ms
+            feedbackTimer.Tick += (sender, e) => {
+                if (_showCopyFeedback && (DateTime.Now - _feedbackStartTime).TotalMilliseconds > FeedbackDurationMs)
+                {
+                    _showCopyFeedback = false;
+                    this.Invalidate();
+                }
+            };
+            feedbackTimer.Start();
         }
 
         private void InitializeComponent()
@@ -104,6 +125,12 @@ protected override void OnPaint(PaintEventArgs e)
     Color backColor = Color.FromArgb(70, 70, 70);
     Color textColor = Color.White;
     int cornerRadius = 12;
+    
+    // If copy feedback is active, use a different background color
+    if (_showCopyFeedback)
+    {
+        backColor = Color.FromArgb(60, 100, 60); // Slightly green to indicate success
+    }
 
     int labelOffsetY = 0;
 
@@ -184,5 +211,69 @@ protected override void OnPaint(PaintEventArgs e)
         TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl
     );
 }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        if (!string.IsNullOrEmpty(_messageText))
+        {
+            _copyButton.ShowWithAnimation();
+            UpdateCopyButtonPosition();
+        }
+    }
+    
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        
+        // Check if mouse is over the copy button
+        Point cursorPos = this.PointToClient(Cursor.Position);
+        if (!_copyButton.ClientRectangle.Contains(cursorPos))
+        {
+            _copyButton.HideWithAnimation();
+        }
+    }
+    
+    private void UpdateCopyButtonPosition()
+    {
+        if (_role == "user")
+        {
+            _copyButton.Left = 5;
+        }
+        else
+        {
+            _copyButton.Left = this.Width - _copyButton.Width - 5;
+        }
+        _copyButton.Top = 5;
+    }
+    
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        UpdateCopyButtonPosition();
+    }
+    
+    private void CopyButton_CopyClicked(object sender, EventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_messageText))
+        {
+            try
+            {
+                Clipboard.SetText(_messageText);
+                ShowCopyFeedback();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to copy text to clipboard: " + ex.Message, 
+                    "Copy Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+    
+    private void ShowCopyFeedback()
+    {
+        _showCopyFeedback = true;
+        _feedbackStartTime = DateTime.Now;
+        this.Invalidate();
     }
 }
