@@ -202,142 +202,98 @@ namespace RoastMyCode
                     try
                     {
                         string content = File.ReadAllText(file);
-                        string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                        string language = DetectLanguage(relativePath, content);
-                        fileLanguages[relativePath] = language;
+                        string displayName = Path.GetFileName(file);
+                        string language = DetectLanguage(file, content);
                         
-                        _uploadedFiles[relativePath] = content;
-                        _currentTotalSizeBytes += new FileInfo(file).Length;
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error processing {file}: {ex.Message}");
-                    }
-                }
-
-                var possibleMains = codeFiles.Where(f => 
-                    f.IndexOf("program", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    f.IndexOf("main", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    f.IndexOf("app", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    f.IndexOf("index", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .ToList();
-
-                var filesToProcess = possibleMains.Concat(codeFiles.Except(possibleMains));
-
-                foreach (string file in filesToProcess)
-                {
-                    try
-                    {
-                        string relativePath = file.Substring(tempDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                        if (fileLanguages.TryGetValue(relativePath, out string? language) && 
-                            _uploadedFiles.TryGetValue(relativePath, out string? content))
+                        if (!_uploadedFiles.ContainsKey(displayName))
                         {
-                            result += $"=== {relativePath} ({language}) ===\n{content}\n\n";
-                            processedFiles.Add(relativePath);
+                            _uploadedFiles[displayName] = content;
+                            processedFiles.Add(displayName);
+                            fileLanguages[displayName] = language;
                         }
                     }
                     catch (Exception ex)
                     {
-                        result += $"Error reading {Path.GetFileName(file)}: {ex.Message}\n\n";
+                        return (string.Empty, $"Error processing {Path.GetFileName(file)}: {ex.Message}");
                     }
                 }
 
-                
-                if (processedFiles.Count == 0)
+                if (processedFiles.Count > 0)
                 {
-                    return (string.Empty, "No valid code files could be extracted from the ZIP");
+                    result = string.Join("\n\n", processedFiles.Select(f => $"=== {f} ({fileLanguages[f]}) ===\n{_uploadedFiles[f]}"));
                 }
-                
+
                 return (result, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                foreach (var file in processedFiles)
-                {
-                    _uploadedFiles.Remove(file);
-                }
-                _currentTotalSizeBytes -= processedFiles.Sum(f => new FileInfo(Path.Combine(tempDir, f)).Length);
-                
-                return (string.Empty, $"Error processing ZIP file: {ex.Message}");
             }
             finally
             {
-                try 
-                { 
-                    if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                {
+                    try
                     {
                         Directory.Delete(tempDir, true);
                     }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error cleaning up temp directory: {ex.Message}");
+                    catch
+                    {
+                        // Ignore cleanup errors
+                    }
                 }
             }
         }
 
         private bool IsFileTypeAllowed(string fileName)
         {
-            string extension = Path.GetExtension(fileName).ToLowerInvariant();
-            return _fileUploadOptions.AllowedExtensions.Contains(extension) || 
-                   _languageMap.ContainsKey(Path.GetFileName(fileName).ToLowerInvariant());
+            // Since we're allowing all file types now, we only need to check if it's a valid file
+            return !string.IsNullOrEmpty(fileName) && File.Exists(fileName);
         }
 
         private bool IsFileSizeWithinLimit(string filePath, out string error)
         {
             error = string.Empty;
-            var fileInfo = new FileInfo(filePath);
-            
-            if (fileInfo.Length > _fileUploadOptions.MaxFileSizeBytes)
+            try
             {
-                error = $"File '{Path.GetFileName(filePath)}' exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB";
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length > _fileUploadOptions.MaxFileSizeBytes)
+                {
+                    error = $"File '{Path.GetFileName(filePath)}' exceeds maximum size of {_fileUploadOptions.MaxFileSizeMB}MB";
+                    return false;
+                }
+
+                if (fileInfo.Length > (_fileUploadOptions.MaxTotalSizeBytes - _currentTotalSizeBytes))
+                {
+                    error = $"Adding this file would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB";
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = $"Error checking file size: {ex.Message}";
                 return false;
             }
-
-            if (_currentTotalSizeBytes + fileInfo.Length > _fileUploadOptions.MaxTotalSizeBytes)
-            {
-                error = $"Adding this file would exceed the total size limit of {_fileUploadOptions.MaxTotalSizeMB}MB";
-                return false;
-            }
-
-            return true;
         }
 
         private bool ValidateFiles(IEnumerable<string> filePaths, out List<string> validFiles, out List<string> errors)
         {
             validFiles = new List<string>();
             errors = new List<string>();
-            long totalSize = 0;
 
-            foreach (var filePath in filePaths)
+            foreach (string filePath in filePaths)
             {
-                try
+                if (!IsFileTypeAllowed(filePath))
                 {
-                    if (!IsFileTypeAllowed(filePath))
-                    {
-                        errors.Add($"File type not allowed: {Path.GetFileName(filePath)}");
-                        continue;
-                    }
-
-                    if (!IsFileSizeWithinLimit(filePath, out string sizeError))
-                    {
-                        errors.Add(sizeError);
-                        continue;
-                    }
-
-                    var fileInfo = new FileInfo(filePath);
-                    totalSize += fileInfo.Length;
-                    validFiles.Add(filePath);
+                    errors.Add($"File type not allowed: {Path.GetFileName(filePath)}");
+                    continue;
                 }
-                catch (Exception ex)
+
+                if (!IsFileSizeWithinLimit(filePath, out string error))
                 {
-                    errors.Add($"Error processing {Path.GetFileName(filePath)}: {ex.Message}");
+                    errors.Add(error);
+                    continue;
                 }
-            }
 
-            if (errors.Count == 0)
-            {
-                _currentTotalSizeBytes += totalSize;
+                validFiles.Add(filePath);
             }
 
             return errors.Count == 0;
@@ -352,27 +308,21 @@ namespace RoastMyCode
 
         private void DownloadCodeBundle()
         {
-            if (_uploadedFiles.Count == 0)
+            try
             {
-                AddChatMessage("No files available to download.", "system");
-                return;
-            }
-
-            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-            {
-                saveFileDialog.Filter = "ZIP Archive|*.zip";
-                saveFileDialog.Title = "Save Code Bundle";
-                saveFileDialog.FileName = $"code_bundle_{DateTime.Now:yyyyMMddHHmmss}.zip";
-                
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                using (SaveFileDialog saveFileDialog = new SaveFileDialog())
                 {
-                    try
+                    saveFileDialog.Filter = "ZIP Archive|*.zip";
+                    saveFileDialog.Title = "Save Code Bundle";
+                    saveFileDialog.FileName = "code_bundle.zip";
+
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
                     {
                         string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                        Directory.CreateDirectory(tempDir);
-
                         try
                         {
+                            Directory.CreateDirectory(tempDir);
+
                             foreach (var file in _uploadedFiles)
                             {
                                 string filePath = Path.Combine(tempDir, file.Key);
@@ -383,77 +333,49 @@ namespace RoastMyCode
                             {
                                 File.Delete(saveFileDialog.FileName);
                             }
-                            
+
                             ZipFile.CreateFromDirectory(tempDir, saveFileDialog.FileName);
-                            
-                            AddChatMessage($"Code bundle saved successfully: {Path.GetFileName(saveFileDialog.FileName)}", "system");
+                            AddChatMessage($"Code bundle saved to: {saveFileDialog.FileName}", "system");
                         }
                         finally
                         {
-                            try { Directory.Delete(tempDir, true); }
-                            catch { /* Ignore cleanup errors */ }
+                            if (Directory.Exists(tempDir))
+                            {
+                                Directory.Delete(tempDir, true);
+                            }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        AddChatMessage($"Error creating code bundle: {ex.Message}", "system");
-                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                AddChatMessage($"Error saving code bundle: {ex.Message}", "system");
             }
         }
 
         private void ShowDownloadButton()
         {
-            if (this.InvokeRequired)
+            if (pbUploadIcon == null)
             {
-                this.Invoke(new Action(ShowDownloadButton));
-                return;
+                pbUploadIcon = new PictureBox
+                {
+                    Size = new Size(32, 32),
+                    Location = new Point(pbCameraIcon.Location.X - 40, pbCameraIcon.Location.Y),
+                    Cursor = Cursors.Hand,
+                    Image = Image.FromFile(Path.Combine(AppContext.BaseDirectory, "assets", "download.png")),
+                    SizeMode = PictureBoxSizeMode.StretchImage
+                };
+                pbUploadIcon.Click += (s, e) => DownloadCodeBundle();
+                inputPanel.Controls.Add(pbUploadIcon);
             }
-
-            var existingButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
-            existingButton?.Dispose();
-
-            var downloadButton = new Button
-            {
-                Name = "btnDownloadBundle",
-                Text = "Download Code Bundle",
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                FlatAppearance = { BorderSize = 0 },
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point),
-                Padding = new Padding(15, 5, 15, 5),
-                AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(this.ClientSize.Width - 220, 10)
-            };
-
-            downloadButton.Click += (s, e) => DownloadCodeBundle();
-            
-            downloadButton.MouseEnter += (s, e) => {
-                downloadButton.BackColor = Color.FromArgb(0, 100, 180);
-            };
-            downloadButton.MouseLeave += (s, e) => {
-                downloadButton.BackColor = Color.FromArgb(0, 120, 215);
-            };
-
-            this.Controls.Add(downloadButton);
-            downloadButton.BringToFront();
+            pbUploadIcon.Visible = true;
         }
-        
+
         private void HideDownloadButton()
         {
-            if (this.InvokeRequired)
+            if (pbUploadIcon != null)
             {
-                this.Invoke(new Action(HideDownloadButton));
-                return;
-            }
-
-            var downloadButton = this.Controls.OfType<Button>().FirstOrDefault(b => b.Name == "btnDownloadBundle");
-            if (downloadButton != null)
-            {
-                this.Controls.Remove(downloadButton);
-                downloadButton.Dispose();
+                pbUploadIcon.Visible = false;
             }
         }
     }

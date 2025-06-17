@@ -104,8 +104,14 @@ namespace RoastMyCode
             string extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension)) return _languageMap[extension];
 
-            if (string.IsNullOrEmpty(extension) && !string.IsNullOrEmpty(content))
+            if (!string.IsNullOrEmpty(content))
             {
+                string detectedLanguage = LanguageDetector.DetectLanguage(content);
+                if (detectedLanguage != "text")
+                {
+                    return detectedLanguage;
+                }
+
                 if (content.StartsWith("#!"))
                 {
                     if (content.Contains("python")) return "Python Script";
