@@ -25,12 +25,14 @@ namespace RoastMyCode
         private string[] _codeExtensions = Array.Empty<string>();
         private long _currentTotalSizeBytes = 0;
         private readonly SpeechSynthesizer _speechSynthesizer = new();
+        private string _selectedVoice = "Male";
 
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
         private ComboBox cmbFontStyle = null!;
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
+        private ComboBox cmbVoiceType = null!;
         private Panel titleLogoPanel = null!;
         private RichTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
@@ -81,6 +83,7 @@ namespace RoastMyCode
 
                 InitializeComponent();
                 InitializeModernUI();
+                InitializeVoiceTypeComboBox();
                 ApplyTheme();
                 LoadConversationHistory();
             }
@@ -182,6 +185,12 @@ namespace RoastMyCode
             }
         }
 
+        private void Speak(string text, string? voice)
+        {
+            _speechSynthesizer.SelectVoiceByHints(voice == "Female" ? VoiceGender.Female : VoiceGender.Male);
+            _speechSynthesizer.SpeakAsync(text);
+        }
+
         private async void rtInput_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
@@ -196,6 +205,7 @@ namespace RoastMyCode
                         string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
 
                         AddChatMessage(aiResponse, "assistant");
+                        Speak(aiResponse, _selectedVoice);
                         _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
                     }
                     catch (Exception ex)
@@ -211,6 +221,19 @@ namespace RoastMyCode
             }
         }
 
+        private void CmbVoiceType_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            _selectedVoice = cmbVoiceType.SelectedItem?.ToString() ?? "Male";
+        }
+
+        private void InitializeVoiceTypeComboBox()
+        {
+            cmbVoiceType.Items.Add("Male");
+            cmbVoiceType.Items.Add("Female");
+            cmbVoiceType.SelectedIndex = 0;
+            cmbVoiceType.SelectedIndexChanged += CmbVoiceType_SelectedIndexChanged;
+        }
+
         private async void BtnSend_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(rtInput.Text) || rtInput.Text == "Type your message here...") return;
@@ -223,6 +246,7 @@ namespace RoastMyCode
                 string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
 
                 AddChatMessage(aiResponse, "assistant");
+                Speak(aiResponse, _selectedVoice);
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
             }
             catch (Exception ex)

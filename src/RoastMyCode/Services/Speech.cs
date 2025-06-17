@@ -21,7 +21,7 @@ namespace RoastMyCode
 
                 if (lastAIBubble != null)
                 {
-                    _speechSynthesizer.SelectVoiceByHints(VoiceGender.Neutral);
+                    _speechSynthesizer.SelectVoiceByHints(_selectedVoice == "Female" ? VoiceGender.Female : VoiceGender.Male);
                     _speechSynthesizer.Volume = 100;
                     _speechSynthesizer.Rate = 0;
                     _speechSynthesizer.SpeakAsync(lastAIBubble.MessageText);

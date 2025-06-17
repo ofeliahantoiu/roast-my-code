@@ -346,6 +346,56 @@ namespace RoastMyCode
             };
             leftControlsPanel.Controls.Add(cmbRoastLevel);
 
+            cmbVoiceType = new ComboBox
+            {
+                Size = new Size(80, 24),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.Gray,
+                Margin = new Padding(5, 0, 0, 0),
+                DrawMode = DrawMode.OwnerDrawFixed
+            };
+
+            cmbVoiceType.DrawItem += (sender, e) => {
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
+                {
+                    e.Graphics.FillRectangle(brush, e.Bounds);
+                }
+
+                if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(65, 65, 65)))
+                    {
+                        e.Graphics.FillRectangle(brush, e.Bounds);
+                    }
+                }
+
+                if (e.Index >= 0 && e.Font != null)
+                {
+                    string text = cmbVoiceType.Items[e.Index].ToString() ?? string.Empty;
+                    Color textColor = e.Index == 0 ? Color.Gray : Color.White;
+                    using (var brush = new SolidBrush(textColor))
+                    {
+                        e.Graphics.DrawString(text, e.Font, brush, e.Bounds);
+                    }
+                }
+            };
+
+            cmbVoiceType.MeasureItem += (sender, e) => {
+                e.ItemHeight = 24;
+            };
+
+            cmbVoiceType.SelectedIndexChanged += (s, e) => {
+                if (cmbVoiceType.SelectedIndex == 0)
+                    cmbVoiceType.ForeColor = Color.Gray;
+                else
+                    cmbVoiceType.ForeColor = Color.White;
+            };
+
+            leftControlsPanel.Controls.Add(cmbVoiceType);
+
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;
             inputPanel = new Panel

@@ -355,7 +355,7 @@ namespace RoastMyCode
 
         private void ShowDownloadButton()
         {
-            if (pbUploadIcon == null)
+            if (pbUploadIcon == null && pbCameraIcon != null && inputPanel != null)
             {
                 pbUploadIcon = new PictureBox
                 {
@@ -368,7 +368,10 @@ namespace RoastMyCode
                 pbUploadIcon.Click += (s, e) => DownloadCodeBundle();
                 inputPanel.Controls.Add(pbUploadIcon);
             }
-            pbUploadIcon.Visible = true;
+            if (pbUploadIcon != null)
+            {
+                pbUploadIcon.Visible = true;
+            }
         }
 
         private void HideDownloadButton()
