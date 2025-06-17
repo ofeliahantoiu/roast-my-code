@@ -230,36 +230,6 @@ namespace RoastMyCode
             _speechSynthesizer.SpeakAsync(text);
         }
 
-        private async void rtInput_KeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;
-                if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
-                {
-                    SendMessage();
-                    try
-                    {
-                        string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
-                        string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
-
-                        AddChatMessage(aiResponse, "assistant");
-                        Speak(aiResponse, _selectedVoice);
-                        _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
-                    }
-                    catch (Exception ex)
-                    {
-                        AddChatMessage($"Error: {ex.Message}", "system");
-                    }
-                    finally
-                    {
-                        rtInput.Enabled = true;
-                        pbSendIcon.Enabled = true;
-                    }
-                }
-            }
-        }
-
         private void CmbVoiceType_SelectedIndexChanged(object? sender, EventArgs e)
         {
             _selectedVoice = cmbVoiceType.SelectedItem?.ToString() ?? "Male";
@@ -273,31 +243,115 @@ namespace RoastMyCode
             cmbVoiceType.SelectedIndexChanged += CmbVoiceType_SelectedIndexChanged;
         }
 
-        private async void BtnSend_Click(object? sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(rtInput.Text) || rtInput.Text == "Type your message here...") return;
+        private Panel? _typingIndicatorPanel;
 
+        private void ShowTypingIndicator()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(ShowTypingIndicator));
+                return;
+            }
+
+            chatAreaPanel.SuspendLayout();
+
+            _typingIndicatorPanel = new Panel
+            {
+                Height = 40,
+                Width = chatAreaPanel.ClientSize.Width - 40,
+                Padding = new Padding(10)
+            };
+
+            var bubble = new Panel
+            {
+                BackColor = Color.FromArgb(50, 50, 50),
+                Padding = new Padding(10),
+                Dock = DockStyle.Left,
+                AutoSize = true
+            };
+
+            var label = new Label
+            {
+                Text = "Bot is typing...",
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = Color.Gray,
+                AutoSize = true
+            };
+
+            bubble.Controls.Add(label);
+            _typingIndicatorPanel.Controls.Add(bubble);
+            chatAreaPanel.Controls.Add(_typingIndicatorPanel);
+
+            chatAreaPanel.ResumeLayout(false);
+            chatAreaPanel.ScrollControlIntoView(_typingIndicatorPanel);
+        }
+
+        private void RemoveTypingIndicator()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(RemoveTypingIndicator));
+                return;
+            }
+
+            if (_typingIndicatorPanel != null)
+            {
+                chatAreaPanel.Controls.Remove(_typingIndicatorPanel);
+                _typingIndicatorPanel.Dispose();
+                _typingIndicatorPanel = null;
+            }
+        }
+
+        private async Task HandleSendMessage()
+        {
+            if (rtInput.Text == "Type your message here..." || string.IsNullOrWhiteSpace(rtInput.Text))
+            {
+                return;
+            }
+
+            string userMessage = rtInput.Text;
+            
+            chatAreaPanel.SuspendLayout();
             SendMessage();
+            chatAreaPanel.ResumeLayout(false);
+
+            rtInput.Enabled = false;
+            pbSendIcon.Enabled = false;
+
+            ShowTypingIndicator();
 
             try
             {
                 string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
-                string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
+                string aiResponse = await _aiService.GenerateRoast(userMessage, selectedLevel, _conversationHistory);
+
+                RemoveTypingIndicator();
 
                 PlaySoundEffect();
+                
+                chatAreaPanel.SuspendLayout();
                 AddChatMessage(aiResponse, "assistant");
+                chatAreaPanel.ResumeLayout(false);
+
                 Speak(aiResponse, _selectedVoice);
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
             }
             catch (Exception ex)
             {
+                RemoveTypingIndicator();
                 AddChatMessage($"Error: {ex.Message}", "system");
             }
             finally
             {
                 rtInput.Enabled = true;
                 pbSendIcon.Enabled = true;
+                rtInput.Focus();
             }
+        }
+
+        private async void BtnSend_Click(object? sender, EventArgs e)
+        {
+            await HandleSendMessage();
         }
     }
 }

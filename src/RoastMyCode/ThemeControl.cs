@@ -175,7 +175,7 @@ namespace RoastMyCode
             UpdateThemeIcon();
             if (pbSendIcon != null) LoadImageFromAssets(pbSendIcon, _isDarkMode ? "send.png" : "message.png");
             if (pbCameraIcon != null) LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
-            if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
+            if (pbMicIcon != null) LoadImageFromAssets(pbMicIcon, _isDarkMode ? "volumeWhite.png" : "volume.png");
             if (pbUploadIcon != null) LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
         }
 

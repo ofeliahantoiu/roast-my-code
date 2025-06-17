@@ -507,18 +507,18 @@ namespace RoastMyCode
                 Location = new Point(70, (inputPanelHeight - 26) / 2),
                 Visible = true
             };
-            LoadImageFromAssets(pbMicIcon, _isDarkMode ? "microphonelight.png" : "microphonedark.png");
-            pbMicIcon.Click += (s, e) => SpeakMessage();    
+            LoadImageFromAssets(pbMicIcon, _isDarkMode ? "volumeWhite.png" : "volume.png");
+            pbMicIcon.Click += (s, e) => SpeakMessage();
 
             leftIconsPanel.Controls.Add(pbUploadIcon);
             leftIconsPanel.Controls.Add(pbCameraIcon);
             leftIconsPanel.Controls.Add(pbMicIcon);
             leftIconsPanel.BringToFront();
-            
+
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
 
             ToolTip toolTip = new ToolTip();
-            toolTip.SetToolTip(pbMicIcon, "Hear the roast. Feel the pain.");
+            toolTip.SetToolTip(pbMicIcon, "Click to hear the AI's response.");
 
             this.FormClosed += (s, e) => toolTip.Dispose();
             this.components?.Add(toolTip);
@@ -540,29 +540,7 @@ namespace RoastMyCode
                 if (e.KeyCode == Keys.Enter)
                 {
                     e.SuppressKeyPress = true;
-                    if (rtInput.Text != "Type your message here..." && !string.IsNullOrWhiteSpace(rtInput.Text))
-                    {
-                        SendMessage();
-                        try
-                        {
-                            string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
-                            string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
-
-                            PlaySoundEffect();
-                            AddChatMessage(aiResponse, "assistant");
-                            Speak(aiResponse, _selectedVoice);
-                            _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
-                        }
-                        catch (Exception ex)
-                        {
-                            AddChatMessage($"Error: {ex.Message}", "system");
-                        }
-                        finally
-                        {
-                            rtInput.Enabled = true;
-                            pbSendIcon.Enabled = true;
-                        }
-                    }
+                    await HandleSendMessage();
                 }
             };
 
