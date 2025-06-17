@@ -548,7 +548,9 @@ namespace RoastMyCode
                             string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
                             string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
 
+                            PlaySoundEffect();
                             AddChatMessage(aiResponse, "assistant");
+                            Speak(aiResponse, _selectedVoice);
                             _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
                         }
                         catch (Exception ex)

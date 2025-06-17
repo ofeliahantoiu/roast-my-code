@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
+using NAudio.Wave;
 using System.Text.Json;
 using System.Windows.Forms;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,8 @@ namespace RoastMyCode
     {
         private readonly IConfiguration _configuration;
         private readonly IAIService _aiService;
+        private IWavePlayer? _waveOutDevice;
+        private AudioFileReader? _audioFileReader;
         private readonly List<ChatMessage> _conversationHistory;
         private readonly FileUploadOptions _fileUploadOptions;
         private bool _isDarkMode = true;
@@ -185,6 +188,42 @@ namespace RoastMyCode
             }
         }
 
+        private void PlaySoundEffect()
+        {
+            try
+            {
+                string soundFilePath = Path.Combine(AppContext.BaseDirectory, "assets", "sound1.mp3");
+                if (!File.Exists(soundFilePath))
+                {
+                    MessageBox.Show($"Sound file not found at: {soundFilePath}", "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                _waveOutDevice = new WaveOutEvent();
+                _audioFileReader = new AudioFileReader(soundFilePath);
+                _waveOutDevice.PlaybackStopped += OnPlaybackStopped;
+                _waveOutDevice.Init(_audioFileReader);
+                _waveOutDevice.Play();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing sound: {ex.Message}", "Sound Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
+        {
+            _audioFileReader?.Dispose();
+            _audioFileReader = null;
+            _waveOutDevice?.Dispose();
+            _waveOutDevice = null;
+
+            if (e.Exception != null)
+            {
+                MessageBox.Show($"Playback error: {e.Exception.Message}", "Sound Playback Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void Speak(string text, string? voice)
         {
             _speechSynthesizer.SelectVoiceByHints(voice == "Female" ? VoiceGender.Female : VoiceGender.Male);
@@ -245,6 +284,7 @@ namespace RoastMyCode
                 string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
                 string aiResponse = await _aiService.GenerateRoast(rtInput.Text, selectedLevel, _conversationHistory);
 
+                PlaySoundEffect();
                 AddChatMessage(aiResponse, "assistant");
                 Speak(aiResponse, _selectedVoice);
                 _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
