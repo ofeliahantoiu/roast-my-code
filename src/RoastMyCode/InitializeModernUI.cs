@@ -43,6 +43,16 @@ namespace RoastMyCode
             };
             this.Controls.Add(bottomPanel);
 
+            pbGradientBackground = new PictureBox
+            {
+                Size = new Size(this.ClientSize.Width, this.ClientSize.Height / 2),
+                Location = new Point(0, this.ClientSize.Height / 2),
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None,
+                SizeMode = PictureBoxSizeMode.StretchImage
+            };
+            this.Controls.Add(pbGradientBackground);
+
             this.Resize += (s, e) =>
             {
                 pbGradientBackground.Size = new Size(this.ClientSize.Width, this.ClientSize.Height / 2);
@@ -397,6 +407,19 @@ namespace RoastMyCode
             };
             LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
             pbUploadIcon.Click += PbCameraIcon_Click;
+            
+            ToolTip uploadToolTip = new ToolTip
+            {
+                AutoPopDelay = 3000,
+                InitialDelay = 200,
+                ReshowDelay = 200,
+                ShowAlways = true,
+                BackColor = Color.FromArgb(50, 50, 50),
+                ForeColor = Color.White
+            };
+            uploadToolTip.SetToolTip(pbUploadIcon, "Upload code. Regret instantly.");
+            this.FormClosed += (s, e) => uploadToolTip.Dispose();
+            this.components?.Add(uploadToolTip);
 
             pbCameraIcon = new PictureBox
             {
@@ -409,6 +432,20 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+            
+            ToolTip cameraToolTip = new ToolTip
+            {
+                AutoPopDelay = 3000,
+                InitialDelay = 200,
+                ReshowDelay = 200,
+                ShowAlways = true,
+                BackColor = Color.FromArgb(50, 50, 50),
+                ForeColor = Color.White
+            };
+            cameraToolTip.SetToolTip(pbCameraIcon, "Snap your reaction. Cry later.");
+            
+            this.FormClosed += (s, e) => cameraToolTip.Dispose();
+            this.components?.Add(cameraToolTip);
 
             pbMicIcon = new PictureBox
             {
@@ -429,6 +466,12 @@ namespace RoastMyCode
             leftIconsPanel.BringToFront();
             
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
+
+            ToolTip toolTip = new ToolTip();
+            toolTip.SetToolTip(pbMicIcon, "Hear the roast. Feel the pain.");
+
+            this.FormClosed += (s, e) => toolTip.Dispose();
+            this.components?.Add(toolTip);
 
             rtInput = new RichTextBox
             {
