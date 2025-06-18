@@ -32,7 +32,7 @@ namespace RoastMyCode
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Font = _currentFont,
-                Margin = new Padding(10, 5, 10, 5)
+                Margin = new Padding(10, 15, 10, 15) // Increased vertical spacing (top/bottom) to 15px
             };
 
             chatAreaPanel.Controls.Add(bubble);
@@ -88,7 +88,9 @@ namespace RoastMyCode
 
                     bubble.Top = currentY;
 
-                    currentY += bubble.Height + bubble.Margin.Vertical;
+                    // Add additional vertical spacing between bubbles (5% of panel height)
+                    int additionalSpacing = (int)(chatAreaPanel.Height * 0.05);
+                    currentY += bubble.Height + bubble.Margin.Vertical + additionalSpacing;
                 }
             }
             chatAreaPanel.AutoScrollMinSize = new Size(0, currentY + 50);
