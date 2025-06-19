@@ -125,10 +125,12 @@ namespace RoastMyCode.Controls
             if (string.IsNullOrEmpty(language))
                 return "text";
                 
-            // Convert to lowercase for case-insensitive comparison
+            // Log the original language for debugging
+            System.Diagnostics.Debug.WriteLine($"Normalizing language name: '{language}'");
+            
             string normalizedLanguage = language.ToLowerInvariant().Trim();
             
-            // Handle common language name variations
+            // Map alternate language names to standard ones
             switch (normalizedLanguage)
             {
                 case "c#":
