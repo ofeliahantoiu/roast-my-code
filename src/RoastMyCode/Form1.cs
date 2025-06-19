@@ -353,5 +353,50 @@ namespace RoastMyCode
         {
             await HandleSendMessage();
         }
+
+        private void BtnDownloadConversation_Click(object? sender, EventArgs e)
+        {
+            using SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                FileName = $"Chat_History_{DateTime.Now:yyyyMMdd_HHmmss}.txt",
+                Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
+                Title = "Save Conversation As"
+            };
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    var lines = new List<string>();
+
+                    lines.Add($"Chat History - {DateTime.Now}");
+                    lines.Add(new string('-', 80));
+
+                    foreach (var message in _conversationHistory)
+                    {
+                        string timestamp = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}]";
+                        string role = message.Role.ToLower() switch
+                        {
+                            "user" => "You",
+                            "assistant" => "Assistant",
+                            _ => message.Role
+                        };
+
+                        lines.Add($"{timestamp} {role}:\n{message.Content.Trim()}");
+                        lines.Add(new string('-', 80));
+                    }
+
+                    File.WriteAllLines(saveFileDialog.FileName, lines);
+
+                    MessageBox.Show("Conversation saved successfully.", "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save conversation:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+
     }
 }
