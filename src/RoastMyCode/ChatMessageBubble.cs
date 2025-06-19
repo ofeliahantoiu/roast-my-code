@@ -23,7 +23,6 @@ namespace RoastMyCode
         
         // Syntax highlighting components
         private SyntaxHighlightedCodeView? _codeView;
-        private Label? _languageBadge;
         private bool _isCodeBlock = false;
 
         public string MessageText
@@ -391,15 +390,7 @@ namespace RoastMyCode
                 UpdateMenuButtonPosition();
             }
             
-            // Update language badge position when parent changes
-            if (Parent != null && _languageBadge != null)
-            {
-                if (!Parent.Controls.Contains(_languageBadge))
-                {
-                    Parent.Controls.Add(_languageBadge);
-                }
-                UpdateLanguageBadgePosition();
-            }
+            // Language badge references removed
             
             // Update code view if needed
             if (_isCodeBlock && _role == "user")
@@ -466,184 +457,18 @@ namespace RoastMyCode
                 _codeView.Visible = true;
                 _codeView.BringToFront(); // Make sure it's visible above other controls
                 
-                // Create the language badge if it doesn't exist
-                if (_languageBadge == null)
-                {
-                    CreateLanguageBadge();
-                    
-                    // Make sure the badge is added to the parent control
-                    if (this.Parent != null && _languageBadge != null)
-                    {
-                        this.Parent.Controls.Add(_languageBadge);
-                        _languageBadge.BringToFront();
-                        UpdateLanguageBadgePosition();
-                    }
-                }
-                else
-                {
-                    // Update existing badge
-                    string displayLanguage = FormatLanguageForDisplay(_language);
-                    if (_languageBadge != null)
-                    {
-                        _languageBadge.Text = displayLanguage;
-                        _languageBadge.Tag = _language;
-                        _languageBadge.Visible = true;
-                        UpdateLanguageBadgePosition();
-                    }
-                }
+                // Language badge has been removed in favor of the top panel language display
             }
             else
             {
-                // Hide code view and language badge for non-code blocks
+                // Hide code view for non-code blocks
                 if (_codeView != null)
                     _codeView.Visible = false;
-                    
-                if (_languageBadge != null)
-                    _languageBadge.Visible = false;
             }
         }
         
-        /// <summary>
-        /// Creates a language badge to display above the code block
-        /// </summary>
-        private void CreateLanguageBadge()
-        {
-            if (string.IsNullOrEmpty(_language) || _language == "text") return;
-            
-            // Format the language name to be more consistent and user-friendly
-            string displayLanguage = FormatLanguageForDisplay(_language);
-            
-            // Create the language badge with styling closer to ChatGPT
-            _languageBadge = new Label
-            {
-                Text = displayLanguage,
-                AutoSize = true,
-                BackColor = Color.FromArgb(50, 50, 50), // Darker background for better contrast
-                ForeColor = Color.FromArgb(240, 240, 240), // Brighter text for better visibility
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), // Larger font
-                Padding = new Padding(12, 5, 12, 5), // More padding for better visibility
-                Visible = true,
-                BorderStyle = BorderStyle.None,
-                Tag = _language // Store the original language for reference
-            };
-            
-            // Style the badge to look more like ChatGPT's language badge
-            _languageBadge.Paint += (s, e) => {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-                {
-                    int radius = 3; // Smaller radius for more subtle rounding
-                    var rect = new Rectangle(0, 0, _languageBadge.Width - 1, _languageBadge.Height - 1);
-                    path.AddArc(rect.X, rect.Y, radius * 2, radius * 2, 180, 90);
-                    path.AddArc(rect.X + rect.Width - radius * 2, rect.Y, radius * 2, radius * 2, 270, 90);
-                    path.AddArc(rect.X + rect.Width - radius * 2, rect.Y + rect.Height - radius * 2, radius * 2, radius * 2, 0, 90);
-                    path.AddArc(rect.X, rect.Y + rect.Height - radius * 2, radius * 2, radius * 2, 90, 90);
-                    path.CloseAllFigures();
-                    _languageBadge.Region = new Region(path);
-                }
-            };
-        }
-        
-        /// <summary>
-        /// Updates the position of the language badge
-        /// </summary>
-        private void UpdateLanguageBadgePosition()
-        {
-            if (_languageBadge == null || this.Parent == null) return;
-            
-            // Position the badge in the top-right corner of the bubble
-            _languageBadge.Left = this.Right - _languageBadge.Width - 5; // Close to the edge
-            _languageBadge.Top = this.Top - _languageBadge.Height / 2; // Position slightly above the bubble
-            
-            // Only show the badge for code messages when we have a valid language
-            _languageBadge.Visible = _isCodeBlock && 
-                                     !string.IsNullOrEmpty(_language) && 
-                                     _language != "text";
-            
-            // Make sure the badge is above other controls
-            _languageBadge.BringToFront();
-        }
-        
-        /// <summary>
-        /// Formats a language identifier for display in the badge
-        /// </summary>
-        private string FormatLanguageForDisplay(string language)
-        {
-            if (string.IsNullOrEmpty(language))
-                return string.Empty;
-                
-            // Format the language name to be more consistent and user-friendly
-            switch (language.ToLowerInvariant())
-            {
-                case "csharp":
-                    return "C#";
+        // Language badge methods removed
                     
-                case "javascript":
-                    return "JavaScript";
-                    
-                case "typescript":
-                    return "TypeScript";
-                    
-                case "python":
-                    return "Python";
-                    
-                case "java":
-                    return "Java";
-                    
-                case "php":
-                case "php3":
-                case "php4":
-                case "php5":
-                case "php7":
-                case "php8":
-                case "phtml":
-                case "pht":
-                    return "PHP";
-                    
-                case "html":
-                    return "HTML";
-                    
-                case "css":
-                    return "CSS";
-                    
-                case "sql":
-                    return "SQL";
-                    
-                case "xml":
-                    return "XML";
-                    
-                case "json":
-                    return "JSON";
-                    
-                case "markdown":
-                case "md":
-                    return "Markdown";
-                    
-                case "ruby":
-                    return "Ruby";
-                    
-                case "go":
-                    return "Go";
-                    
-                case "rust":
-                    return "Rust";
-                    
-                case "swift":
-                    return "Swift";
-                    
-                case "kotlin":
-                    return "Kotlin";
-                    
-                default:
-                    // Capitalize first letter for other languages
-                    if (language.Length > 0)
-                    {
-                        return char.ToUpper(language[0]) + language.Substring(1).ToLowerInvariant();
-                    }
-                    return language;
-            }
-        }
-        
         private void CopyMenuItem_Click(object? sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_messageText))
@@ -735,15 +560,7 @@ namespace RoastMyCode
                     _codeView = null;
                 }
                 
-                if (_languageBadge != null)
-                {
-                    if (_languageBadge.Parent != null)
-                    {
-                        _languageBadge.Parent.Controls.Remove(_languageBadge);
-                    }
-                    _languageBadge.Dispose();
-                    _languageBadge = null;
-                }
+                // Language badge cleanup code removed
             }
             
             base.Dispose(disposing);

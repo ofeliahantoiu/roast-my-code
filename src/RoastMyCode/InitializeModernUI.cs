@@ -410,33 +410,34 @@ namespace RoastMyCode
             };
             leftControlsPanel.Controls.Add(cmbAnimation);
             
-            // Add language display label
+            // Add simple language display label
             lblLanguage = new Label
             {
-                Text = "Current language:",
+                Text = "Current programming language:",
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9),
-                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.Gray,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Margin = new Padding(10, 3, 0, 0),
                 BackColor = Color.Transparent
             };
             leftControlsPanel.Controls.Add(lblLanguage);
             
-            // Add language display textbox
+            // Add simple language display textbox
             txtLanguageDisplay = new TextBox
             {
                 Size = new Size(100, 24),
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
+                ForeColor = Color.Gray,
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true,
                 Text = "Unknown",
-                Margin = new Padding(5, 0, 0, 0)
+                Margin = new Padding(5, 0, 0, 0),
+                TextAlign = HorizontalAlignment.Center
             };
             leftControlsPanel.Controls.Add(txtLanguageDisplay);
-
+            
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;
             inputPanel = new Panel
