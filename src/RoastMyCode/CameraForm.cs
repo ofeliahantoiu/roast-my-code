@@ -214,7 +214,19 @@ namespace RoastMyCode
 
         private void StartCamera()
         {
-            if (_cameraComboBox?.SelectedItem == null)
+            var selectedItem = _cameraComboBox?.SelectedItem;
+            string selectedCamera = string.Empty;
+
+            if (selectedItem is string s)
+            {
+                selectedCamera = s;
+            }
+            else if (selectedItem != null)
+            {
+                selectedCamera = selectedItem.ToString() ?? string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(selectedCamera))
             {
                 MessageBox.Show("Please select a camera first.", "No Camera Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -222,7 +234,6 @@ namespace RoastMyCode
 
             try
             {
-                string selectedCamera = _cameraComboBox.SelectedItem.ToString()!;
                 if (_previewBox != null)
                 {
                     _cameraService.StartCamera(selectedCamera, _previewBox);
@@ -330,22 +341,15 @@ namespace RoastMyCode
 
         private void SendToChatButton_Click(object? sender, EventArgs e)
         {
-            if (_capturedImage == null)
+            if (_capturedImage != null)
             {
-                MessageBox.Show("No image to send. Please capture an image first.", "No Image", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                string message = "📷 Photo captured";
+                ImageCaptured?.Invoke(this, (message, _capturedImage));
+                MessageBox.Show("Image sent to chat!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-
-            try
+            else
             {
-                // Raise the event to notify the main form
-                ImageCaptured?.Invoke(this, ($"📸 Camera capture saved to: {Path.GetTempPath()}", _capturedImage));
-
-                MessageBox.Show($"Image captured and sent to chat!\nPath: {Path.GetTempPath()}", "Capture Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error sending image to chat: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Please capture an image first.", "No Image", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

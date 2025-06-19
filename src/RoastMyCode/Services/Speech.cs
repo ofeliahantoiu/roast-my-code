@@ -1,6 +1,7 @@
 using System;
 using System.Speech.Synthesis;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 namespace RoastMyCode
 {
@@ -10,25 +11,58 @@ namespace RoastMyCode
         {
             try
             {
-                ChatMessageBubble? lastAIBubble = null;
-                foreach (Control control in chatAreaPanel.Controls)
+                if (!string.IsNullOrEmpty(_lastAIMessage))
                 {
-                    if (control is ChatMessageBubble bubble && bubble.Role == "assistant")
+                    // Play sound effect first
+                    PlaySoundEffect();
+                    
+                    // Small delay before speech
+                    Task.Delay(100).ContinueWith(_ =>
                     {
-                        lastAIBubble = bubble;
-                    }
-                }
-
-                if (lastAIBubble != null)
-                {
-                    _speechSynthesizer.SelectVoiceByHints(_selectedVoice == "Female" ? VoiceGender.Female : VoiceGender.Male);
-                    _speechSynthesizer.Volume = 100;
-                    _speechSynthesizer.Rate = 0;
-                    _speechSynthesizer.SpeakAsync(lastAIBubble.MessageText);
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() => Speak(_lastAIMessage, _selectedVoice)));
+                        }
+                        else
+                        {
+                            Speak(_lastAIMessage, _selectedVoice);
+                        }
+                    });
                 }
                 else
                 {
-                    MessageBox.Show("No AI messages to read.", "No Messages", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Fallback: try to find the last AI message in chat
+                    ChatMessageBubble? lastAIBubble = null;
+                    foreach (Control control in chatAreaPanel.Controls)
+                    {
+                        if (control is ChatMessageBubble bubble && bubble.Role == "assistant")
+                        {
+                            lastAIBubble = bubble;
+                        }
+                    }
+
+                    if (lastAIBubble != null)
+                    {
+                        // Play sound effect first
+                        PlaySoundEffect();
+                        
+                        // Small delay before speech
+                        Task.Delay(100).ContinueWith(_ =>
+                        {
+                            if (InvokeRequired)
+                            {
+                                Invoke(new Action(() => Speak(lastAIBubble.MessageText, _selectedVoice)));
+                            }
+                            else
+                            {
+                                Speak(lastAIBubble.MessageText, _selectedVoice);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        MessageBox.Show("No AI messages to read.", "No Messages", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
             }
             catch (Exception ex)

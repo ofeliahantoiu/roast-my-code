@@ -12,7 +12,6 @@ namespace RoastMyCode
         private string _messageText = string.Empty;
         private string _role = "assistant";
         private string _language = "text";
-        private Image? _image;
 
         public string MessageText
         {
@@ -20,7 +19,14 @@ namespace RoastMyCode
             set
             {
                 _messageText = value;
-                _language = LanguageDetector.DetectLanguage(value);
+                if (value.StartsWith("📷"))
+                {
+                    _language = "PHOTO";
+                }
+                else
+                {
+                    _language = LanguageDetector.DetectLanguage(value);
+                }
                 Invalidate();
             }
         }
@@ -35,26 +41,15 @@ namespace RoastMyCode
             }
         }
 
-        public Image? Image
-        {
-            get => _image;
-            set
-            {
-                _image?.Dispose();
-                _image = value;
-                Invalidate();
-            }
-        }
-
         public ChatMessageBubble()
         {
             InitializeComponent();
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            MinimumSize = new Size(100, 40);
+            MinimumSize = new Size(100, 80);
             MaximumSize = new Size(600, 0);
-            Padding = new Padding(15, 10, 15, 10);
-            Margin = new Padding(12, 8, 12, 8);
+            Padding = new Padding(20);
+            Margin = new Padding(12);
             Font = new Font("Segoe UI", 12);
             DoubleBuffered = true;
             SetStyle(ControlStyles.ResizeRedraw, true);
@@ -73,86 +68,29 @@ namespace RoastMyCode
         {
             base.OnLayout(levent);
 
-            if (Parent == null) return;
+            if (Parent == null || string.IsNullOrEmpty(_messageText)) return;
 
             using (Graphics g = CreateGraphics())
             {
+                TextFormatFlags flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
                 int availableWidth = MaximumSize.Width - Padding.Horizontal;
-                int totalHeight = 0;
-                int contentWidth = 0;
-
-                // Calculate text dimensions
-                if (!string.IsNullOrEmpty(_messageText))
-                {
-                    TextFormatFlags flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
-                    Size proposedSize = new Size(availableWidth, int.MaxValue);
-                    Size textSize = TextRenderer.MeasureText(_messageText, Font, proposedSize, flags);
-                    contentWidth = Math.Max(contentWidth, textSize.Width);
-                    totalHeight += textSize.Height;
-                }
-
-                // Calculate image dimensions
-                if (_image != null)
-                {
-                    try
-                    {
-                        // Validate the image before using it
-                        if (_image.Width <= 0 || _image.Height <= 0)
-                        {
-                            // Image is invalid, skip it
-                            return;
-                        }
-
-                        int maxImageWidth = Math.Min(400, availableWidth);
-                        int maxImageHeight = 300;
-                        
-                        double scaleX = (double)maxImageWidth / _image.Width;
-                        double scaleY = (double)maxImageHeight / _image.Height;
-                        double scale = Math.Min(scaleX, scaleY);
-                        
-                        int imageWidth = (int)(_image.Width * scale);
-                        int imageHeight = (int)(_image.Height * scale);
-                        
-                        contentWidth = Math.Max(contentWidth, imageWidth);
-                        totalHeight += imageHeight;
-                        
-                        // Add spacing between text and image
-                        if (!string.IsNullOrEmpty(_messageText))
-                        {
-                            totalHeight += 10;
-                        }
-                    }
-                    catch (ArgumentException)
-                    {
-                        // Image is invalid or disposed, skip it
-                        return;
-                    }
-                    catch (Exception)
-                    {
-                        // Any other image-related error, skip it
-                        return;
-                    }
-                }
+                Size proposedSize = new Size(availableWidth, int.MaxValue);
+                Size textSize = TextRenderer.MeasureText(_messageText, Font, proposedSize, flags);
 
                 // Language label space
                 int languageLabelHeight = 0;
-                if (_role == "user")
+                if (_role == "user" || _language == "PHOTO")
                 {
                     Size languageSize = TextRenderer.MeasureText(_language.ToUpper(), Font);
-                    languageLabelHeight = languageSize.Height + 12;
+                    languageLabelHeight = languageSize.Height + 10;
                 }
 
-                int minHeight = Math.Max(totalHeight + Padding.Vertical * 2, 30);
-                int finalHeight = minHeight + languageLabelHeight + 10;
+                int minHeight = Math.Max(textSize.Height + Padding.Vertical, 80);
+                int totalHeight = minHeight + languageLabelHeight;
 
-                this.Width = Math.Min(contentWidth + Padding.Horizontal + 8, MaximumSize.Width);
-                this.Height = Math.Max(finalHeight, 50);
-
-                this.Left = (_role == "user")
-                    ? Parent.ClientSize.Width - this.Width - Margin.Right
-                    : Margin.Left;
-
-                Invalidate();
+                // Set width and height
+                this.Width = Math.Min(textSize.Width + Padding.Horizontal, MaximumSize.Width);
+                this.Height = Math.Max(totalHeight, MinimumSize.Height);
             }
         }
 
@@ -170,10 +108,10 @@ namespace RoastMyCode
 
             int labelOffsetY = 0;
 
-            if (_role == "user")
+            if (_role == "user" || _language == "PHOTO")
             {
                 Size langSize = TextRenderer.MeasureText(_language.ToUpper(), Font);
-                int labelPadding = 6;
+                int labelPadding = 8;
                 int labelWidth = langSize.Width + labelPadding * 2;
                 int labelHeight = langSize.Height + labelPadding;
 
@@ -197,18 +135,10 @@ namespace RoastMyCode
                     textColor
                 );
 
-                labelOffsetY = labelRect.Bottom + 5;
+                labelOffsetY = labelRect.Bottom + 6;
             }
 
             int bubbleHeight = this.Height - labelOffsetY;
-            if (bubbleHeight < 30)
-            {
-                bubbleHeight = 30;
-                this.Height = bubbleHeight + labelOffsetY;
-                Invalidate();
-                return;
-            }
-
             Rectangle bubbleRect = new Rectangle(
                 0,
                 labelOffsetY,
@@ -231,84 +161,21 @@ namespace RoastMyCode
                 }
             }
 
-            int currentY = bubbleRect.Top + Padding.Top;
+            Rectangle textRect = new Rectangle(
+                Padding.Left,
+                bubbleRect.Top + Padding.Top,
+                this.Width - Padding.Horizontal,
+                bubbleRect.Height - Padding.Vertical
+            );
 
-            // Draw text if present
-            if (!string.IsNullOrEmpty(_messageText))
-            {
-                Rectangle textRect = new Rectangle(
-                    Padding.Left,
-                    currentY,
-                    this.Width - Padding.Horizontal,
-                    Math.Max(bubbleRect.Height - Padding.Vertical, 20)
-                );
-
-                TextRenderer.DrawText(
-                    g,
-                    _messageText,
-                    Font,
-                    textRect,
-                    textColor,
-                    TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl
-                );
-
-                // Calculate text height for image positioning
-                Size textSize = TextRenderer.MeasureText(_messageText, Font, new Size(this.Width - Padding.Horizontal, int.MaxValue), 
-                    TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
-                currentY += textSize.Height + 10;
-            }
-
-            // Draw image if present
-            if (_image != null)
-            {
-                try
-                {
-                    // Validate the image before using it
-                    if (_image.Width <= 0 || _image.Height <= 0)
-                    {
-                        // Image is invalid, skip drawing
-                        return;
-                    }
-
-                    int maxImageWidth = Math.Min(400, this.Width - Padding.Horizontal);
-                    int maxImageHeight = 300;
-
-                    double scaleX = (double)maxImageWidth / _image.Width;
-                    double scaleY = (double)maxImageHeight / _image.Height;
-                    double scale = Math.Min(scaleX, scaleY);
-
-                    int imageWidth = (int)(_image.Width * scale);
-                    int imageHeight = (int)(_image.Height * scale);
-
-                    Rectangle imageRect = new Rectangle(
-                        Padding.Left + (this.Width - Padding.Horizontal - imageWidth) / 2,
-                        currentY,
-                        imageWidth,
-                        imageHeight
-                    );
-
-                    g.DrawImage(_image, imageRect);
-                }
-                catch (ArgumentException)
-                {
-                    // Image is invalid or disposed, skip drawing
-                    return;
-                }
-                catch (Exception)
-                {
-                    // Any other image-related error, skip drawing
-                    return;
-                }
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _image?.Dispose();
-            }
-            base.Dispose(disposing);
+            TextRenderer.DrawText(
+                g,
+                _messageText,
+                Font,
+                textRect,
+                textColor,
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.VerticalCenter
+            );
         }
     }
 }

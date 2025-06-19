@@ -19,17 +19,18 @@ namespace RoastMyCode
             
             chatAreaPanel = new Panel
             {
-                Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 200 - 120),
-                Location = new Point(0, 200),
+                Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 250 - 120),
+                Location = new Point(0, 250),
                 AutoScroll = true,
                 Padding = new Padding(20),
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
             this.Controls.Add(chatAreaPanel);   
 
             topPanel = new Panel
             {
-                Size = new Size(this.ClientSize.Width, 200),
+                Size = new Size(this.ClientSize.Width, 250),
                 Location = new Point(0, 0),
                 BackColor = Color.Transparent
             };
@@ -49,7 +50,6 @@ namespace RoastMyCode
             btnDownloadConversation.Click += BtnDownloadConversation_Click;
 
             topPanel.Controls.Add(btnDownloadConversation);
-
 
             bottomPanel = new Panel
             {
@@ -74,10 +74,10 @@ namespace RoastMyCode
                 pbGradientBackground.Size = new Size(this.ClientSize.Width, this.ClientSize.Height / 2);
                 pbGradientBackground.Location = new Point(0, this.ClientSize.Height / 2);
 
-                topPanel.Size = new Size(this.ClientSize.Width, 200);
+                topPanel.Size = new Size(this.ClientSize.Width, 250);
 
-                chatAreaPanel.Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 200 - 120);
-                chatAreaPanel.Location = new Point(0, 200);
+                chatAreaPanel.Size = new Size(this.ClientSize.Width, this.ClientSize.Height - 250 - 120);
+                chatAreaPanel.Location = new Point(0, 250);
 
                 bottomPanel.Size = new Size(this.ClientSize.Width, 120);
                 bottomPanel.Location = new Point(0, this.ClientSize.Height - 120);
@@ -85,56 +85,54 @@ namespace RoastMyCode
 
             titleLogoPanel = new Panel
             {
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.None,
                 AutoSize = true,
-                Padding = new Padding(0, 30, 0, 0)
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                MinimumSize = new Size(200, 0)
             };
             topPanel.Controls.Add(titleLogoPanel);
 
             pbLogo = new PictureBox
             {
-                Size = new Size(32, 32),
+                Size = new Size(48, 48),
                 BackColor = Color.Transparent,
                 BorderStyle = BorderStyle.None,
-                Margin = new Padding(0, 0, 0, 5), 
-                SizeMode = PictureBoxSizeMode.StretchImage
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Margin = new Padding(0, 0, 0, 15)
             };
             titleLogoPanel.Controls.Add(pbLogo);
 
             lblTitle = new Label
             {
                 Text = "Roast My Code",
-                Font = new Font("Segoe UI", 14, FontStyle.Regular),
+                Font = new Font("Segoe UI", 16, FontStyle.Regular),
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize = true,
-                Margin = new Padding(0)
+                MinimumSize = new Size(180, 0)
             };
             titleLogoPanel.Controls.Add(lblTitle);
 
-            pbLogo.Location = new Point(
-                (titleLogoPanel.Width - pbLogo.Width) / 2,
-                0
-            );
-            lblTitle.Location = new Point(
-                (titleLogoPanel.Width - lblTitle.Width) / 2,
-                pbLogo.Bottom + pbLogo.Margin.Bottom
-            );
+            titleLogoPanel.PerformLayout();
 
-            int verticalOffset = 40; 
+            pbLogo.Location = new Point((titleLogoPanel.Width - pbLogo.Width) / 2, 0);
+            lblTitle.Location = new Point((titleLogoPanel.Width - lblTitle.Width) / 2, pbLogo.Bottom + pbLogo.Margin.Bottom);
+
             titleLogoPanel.Location = new Point(
-                 (topPanel.Width - titleLogoPanel.Width) / 2,
-                 ((topPanel.Height - titleLogoPanel.Height) / 2) + verticalOffset
-             );
+                (topPanel.Width - titleLogoPanel.PreferredSize.Width) / 2,
+                140
+            );
 
-            topPanel.SizeChanged += (s, e) => {
-                 titleLogoPanel.PerformLayout(); 
-
-                 titleLogoPanel.Location = new Point(
-                     (topPanel.Width - titleLogoPanel.Width) / 2,
-                     ((topPanel.Height - titleLogoPanel.Height) / 2) + verticalOffset
-                 );
-             };
+            topPanel.Resize += (s, e) =>
+            {
+                titleLogoPanel.PerformLayout();
+                pbLogo.Location = new Point((titleLogoPanel.Width - pbLogo.Width) / 2, 0);
+                lblTitle.Location = new Point((titleLogoPanel.Width - lblTitle.Width) / 2, pbLogo.Bottom + pbLogo.Margin.Bottom);
+                titleLogoPanel.Location = new Point(
+                    (topPanel.Width - titleLogoPanel.PreferredSize.Width) / 2,
+                    140
+                );
+            };
 
             FlowLayoutPanel leftControlsPanel = new FlowLayoutPanel
             {
@@ -535,7 +533,7 @@ namespace RoastMyCode
             leftIconsPanel.BackColor = Color.FromArgb(50, 50, 50);
 
             ToolTip toolTip = new ToolTip();
-            toolTip.SetToolTip(pbMicIcon, "Click to hear the AI's response.");
+            toolTip.SetToolTip(pbMicIcon, "Click to hear the last AI response with sound effects.");
 
             this.FormClosed += (s, e) => toolTip.Dispose();
             this.components?.Add(toolTip);
@@ -565,7 +563,7 @@ namespace RoastMyCode
                 if (rtInput.Text == "Type your message here...")
                 {
                     rtInput.Text = "";
-                    rtInput.ForeColor = Color.White;
+                    rtInput.ForeColor = _isDarkMode ? Color.White : Color.Black;
                 }
             };
 
@@ -573,7 +571,7 @@ namespace RoastMyCode
                 if (string.IsNullOrWhiteSpace(rtInput.Text))
                 {
                     rtInput.Text = "Type your message here...";
-                    rtInput.ForeColor = Color.FromArgb(150, 150, 150);
+                    rtInput.ForeColor = _isDarkMode ? Color.FromArgb(150, 150, 150) : Color.FromArgb(100, 100, 100);
                 }
             };
 

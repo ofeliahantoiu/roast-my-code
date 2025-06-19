@@ -10,7 +10,7 @@ namespace RoastMyCode
         {
             Color textColor = _isDarkMode ? Color.White : Color.Black;
             Color backColor = _isDarkMode ? Color.FromArgb(45, 45, 45) : Color.White;
-            Color editorBackColor = _isDarkMode ? Color.FromArgb(50, 50, 50) : Color.White;
+            Color editorBackColor = _isDarkMode ? Color.FromArgb(50, 50, 50) : Color.FromArgb(240, 240, 240);
             Color buttonBackColor = _isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240);
 
             this.BackColor = backColor;
@@ -40,30 +40,47 @@ namespace RoastMyCode
 
             if (control is ChatMessageBubble bubble)
             {
-                if (bubble.Role == "user")
+                bubble.Invalidate();
+                return;
+            }
+
+            if (control is RichTextBox rtb)
+            {
+                rtb.BackColor = editorBackColor;
+                rtb.ForeColor = isDarkMode ? Color.White : Color.Black;
+                return;
+            }
+
+            if (control is ComboBox)
+            {
+                control.BackColor = buttonBackColor;
+                control.ForeColor = textColor;
+                return;
+            }
+
+            if (control is Panel panel)
+            {
+                if (panel == chatAreaPanel)
                 {
-                    bubble.BackColor = Color.FromArgb(70, 70, 70);
-                    bubble.ForeColor = Color.White;
+                    panel.BackColor = isDarkMode ? Color.FromArgb(45, 45, 45) : Color.White;
                 }
                 else
                 {
-                    bubble.ForeColor = isDarkMode ? Color.White : Color.Black;
+                    panel.BackColor = backColor;
                 }
-                bubble.Invalidate();
+                panel.ForeColor = textColor;
+
+                foreach (Control child in panel.Controls)
+                {
+                    ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
+                }
                 return;
             }
 
             control.BackColor = backColor;
             control.ForeColor = textColor;
 
-            if (control is ComboBox comboBox)
-            {
-                comboBox.BackColor = isDarkMode ? Color.FromArgb(45, 45, 48) : Color.FromArgb(240, 240, 240);
-                comboBox.ForeColor = textColor;
-                comboBox.FlatStyle = FlatStyle.Flat;
-                comboBox.Invalidate();
-            }
-            else if (control is TextBox textBox)
+            if (control is TextBox textBox)
             {
                 if (!string.IsNullOrWhiteSpace(rtInput.Text))
                 {
@@ -75,24 +92,6 @@ namespace RoastMyCode
                     textBox.ForeColor = textColor;
                 }
                 textBox.Invalidate();
-            }
-            else if (control is RichTextBox richTextBox)
-            {
-                 richTextBox.BackColor = isDarkMode ? Color.FromArgb(60, 60, 60) : Color.FromArgb(240, 240, 240); 
-                 
-                 if (richTextBox is RoundedRichTextBox rtInput)
-                 {
-                     rtInput.BorderColor = isDarkMode ? Color.FromArgb(100, 100, 100) : Color.FromArgb(180, 180, 180);
-                     rtInput.BorderWidth = 1;
-                     
-                     rtInput.ForeColor = isDarkMode ? Color.White : Color.Black;
-                 }
-                 else
-                 {
-                     richTextBox.ForeColor = textColor;
-                 }
-                 
-                 richTextBox.Invalidate();
             }
             else if (control is CheckBox checkBox)
             {
@@ -111,9 +110,13 @@ namespace RoastMyCode
             {
                 pb.BackColor = backColor;
             }
-            foreach (Control child in control.Controls)
+
+            if (control.HasChildren)
             {
-                ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
+                foreach (Control child in control.Controls)
+                {
+                    ApplyThemeToControl(child, isDarkMode, textColor, backColor, editorBackColor, buttonBackColor);
+                }
             }
         }
 

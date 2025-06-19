@@ -30,6 +30,7 @@ namespace RoastMyCode
         private long _currentTotalSizeBytes = 0;
         private readonly SpeechSynthesizer _speechSynthesizer = new();
         private string _selectedVoice = "Male";
+        private string _lastAIMessage = string.Empty; // Store the last AI message for manual playback
 
         private Panel chatAreaPanel = null!;
         private PictureBox pbThemeToggle = null!;
@@ -83,7 +84,7 @@ namespace RoastMyCode
                 _conversationHistory.Add(new ChatMessage
                 {
                     Role = "assistant",
-                    Content = "Glad you asked. Besides fixing your code and your life? Here's what I tolerate:\n\n• Reports - Like \"What's the last report we exported?\"\n• Your organization - \"How many people are using our software?\"\n• Features - \"How do I change the colors of my report?\""
+                    Content = "Welcome to Roast My Code. I read your code, roast it out loud, and snap your reaction, don't worry, just your face, not your soul. Now show me what disaster you've cooked up."
                 });
 
                 InitializeComponent();
@@ -245,65 +246,6 @@ namespace RoastMyCode
             cmbVoiceType.SelectedIndexChanged += CmbVoiceType_SelectedIndexChanged;
         }
 
-        private Panel? _typingIndicatorPanel;
-
-        private void ShowTypingIndicator()
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(ShowTypingIndicator));
-                return;
-            }
-
-            chatAreaPanel.SuspendLayout();
-
-            _typingIndicatorPanel = new Panel
-            {
-                Height = 40,
-                Width = chatAreaPanel.ClientSize.Width - 40,
-                Padding = new Padding(10)
-            };
-
-            var bubble = new Panel
-            {
-                BackColor = Color.FromArgb(50, 50, 50),
-                Padding = new Padding(10),
-                Dock = DockStyle.Left,
-                AutoSize = true
-            };
-
-            var label = new Label
-            {
-                Text = "Bot is typing...",
-                Font = new Font("Segoe UI", 9, FontStyle.Italic),
-                ForeColor = Color.Gray,
-                AutoSize = true
-            };
-
-            bubble.Controls.Add(label);
-            _typingIndicatorPanel.Controls.Add(bubble);
-            chatAreaPanel.Controls.Add(_typingIndicatorPanel);
-
-            chatAreaPanel.ResumeLayout(false);
-            chatAreaPanel.ScrollControlIntoView(_typingIndicatorPanel);
-        }
-
-        private void RemoveTypingIndicator()
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(RemoveTypingIndicator));
-                return;
-            }
-
-            if (_typingIndicatorPanel != null)
-            {
-                chatAreaPanel.Controls.Remove(_typingIndicatorPanel);
-                _typingIndicatorPanel.Dispose();
-                _typingIndicatorPanel = null;
-            }
-        }
-
         private async Task HandleSendMessage()
         {
             if (rtInput.Text == "Type your message here..." || string.IsNullOrWhiteSpace(rtInput.Text))
@@ -313,35 +255,54 @@ namespace RoastMyCode
 
             string userMessage = rtInput.Text;
             
+            // Add user message with single layout suspension
             chatAreaPanel.SuspendLayout();
-            SendMessage();
-            chatAreaPanel.ResumeLayout(false);
+            try
+            {
+                SendMessage();
+                PositionChatBubbles();
+            }
+            finally
+            {
+                chatAreaPanel.ResumeLayout(true);
+            }
 
             rtInput.Enabled = false;
             pbSendIcon.Enabled = false;
-
-            ShowTypingIndicator();
 
             try
             {
                 string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
                 string aiResponse = await _aiService.GenerateRoast(userMessage, selectedLevel, _conversationHistory);
 
-                RemoveTypingIndicator();
-
-                PlaySoundEffect();
+                // Store the AI response for manual playback
+                _lastAIMessage = aiResponse;
                 
+                // Add AI response with single layout suspension
                 chatAreaPanel.SuspendLayout();
-                AddChatMessage(aiResponse, "assistant");
-                chatAreaPanel.ResumeLayout(false);
-
-                Speak(aiResponse, _selectedVoice);
-                _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                try
+                {
+                    AddChatMessage(aiResponse, "assistant");
+                    _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                    PositionChatBubbles();
+                }
+                finally
+                {
+                    chatAreaPanel.ResumeLayout(true);
+                }
             }
             catch (Exception ex)
             {
-                RemoveTypingIndicator();
-                AddChatMessage($"Error: {ex.Message}", "system");
+                chatAreaPanel.SuspendLayout();
+                try
+                {
+                    AddChatMessage($"Error: {ex.Message}", "system");
+                    PositionChatBubbles();
+                }
+                finally
+                {
+                    chatAreaPanel.ResumeLayout(true);
+                }
             }
             finally
             {
@@ -351,9 +312,96 @@ namespace RoastMyCode
             }
         }
 
-        private async void BtnSend_Click(object? sender, EventArgs e)
+        private async Task HandleImageCapture((string message, Image image) data)
         {
-            await HandleSendMessage();
+            try
+            {
+                // Ensure we're on the UI thread
+                if (InvokeRequired)
+                {
+                    await Task.Run(() => Invoke(new Action(async () => await HandleImageCapture(data))));
+                    return;
+                }
+
+                // Disable input while processing
+                rtInput.Enabled = false;
+                pbSendIcon.Enabled = false;
+
+                try
+                {
+                    // Add user message with photo indicator
+                    string photoMessage = "📷 Photo captured";
+                    chatAreaPanel.SuspendLayout();
+                    try
+                    {
+                        AddChatMessage(photoMessage, "user");
+                        _conversationHistory.Add(new ChatMessage { Content = photoMessage, Role = "user" });
+                        PositionChatBubbles();
+                    }
+                    finally
+                    {
+                        chatAreaPanel.ResumeLayout(true);
+                    }
+                    
+                    // Automatically roast the image
+                    string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                    string aiResponse = await _aiService.RoastImage(data.image, selectedLevel, _conversationHistory);
+                    
+                    // Store the AI response for manual playback
+                    _lastAIMessage = aiResponse;
+                    
+                    // Add AI response
+                    chatAreaPanel.SuspendLayout();
+                    try
+                    {
+                        AddChatMessage(aiResponse, "assistant");
+                        _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                        PositionChatBubbles();
+                    }
+                    finally
+                    {
+                        chatAreaPanel.ResumeLayout(true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    chatAreaPanel.SuspendLayout();
+                    try
+                    {
+                        AddChatMessage($"Error roasting image: {ex.Message}", "system");
+                        PositionChatBubbles();
+                    }
+                    finally
+                    {
+                        chatAreaPanel.ResumeLayout(true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                chatAreaPanel.SuspendLayout();
+                try
+                {
+                    AddChatMessage($"Error processing image: {ex.Message}", "system");
+                    PositionChatBubbles();
+                }
+                finally
+                {
+                    chatAreaPanel.ResumeLayout(true);
+                }
+            }
+            finally
+            {
+                // Re-enable input
+                rtInput.Enabled = true;
+                pbSendIcon.Enabled = true;
+                rtInput.Focus();
+            }
+        }
+
+        private void BtnSend_Click(object? sender, EventArgs e)
+        {
+            _ = HandleSendMessage();
         }
 
         private void BtnDownloadConversation_Click(object? sender, EventArgs e)
@@ -406,26 +454,14 @@ namespace RoastMyCode
                 var cameraForm = new CameraForm(_cameraService);
                 cameraForm.ImageCaptured += async (s, data) => 
                 {
-                    // Add the captured image message to the chat with the actual image
-                    AddChatMessage(data.message, "user", data.image);
-                    _conversationHistory.Add(new ChatMessage { Content = data.message, Role = "user" });
+                    // Ensure we're on the UI thread and handle all operations properly
+                    if (InvokeRequired)
+                    {
+                        Invoke(new Action(async () => await HandleImageCapture(data)));
+                        return;
+                    }
                     
-                    // Automatically roast the image
-                    try
-                    {
-                        string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
-                        string aiResponse = await _aiService.RoastImage(data.image, selectedLevel, _conversationHistory);
-                        
-                        // Add the AI roast response to the chat
-                        AddChatMessage(aiResponse, "assistant");
-                        _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
-                        
-                        
-                    }
-                    catch (Exception ex)
-                    {
-                        AddChatMessage($"Error roasting image: {ex.Message}", "system");
-                    }
+                    await HandleImageCapture(data);
                 };
                 cameraForm.Show(this); // Changed from ShowDialog() to Show() to make it non-modal
             }
