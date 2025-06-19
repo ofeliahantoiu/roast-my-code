@@ -19,6 +19,9 @@ namespace RoastMyCode
         private Bitmap? _capturedImage;
         private bool _isCameraRunning = false;
 
+        // Event for communicating with the main form
+        public event EventHandler<string>? ImageCaptured;
+
         public CameraForm(ICameraService cameraService)
         {
             _cameraService = cameraService ?? throw new ArgumentNullException(nameof(cameraService));
@@ -30,13 +33,14 @@ namespace RoastMyCode
         private void InitializeComponent()
         {
             this.Text = "Camera - Roast My Code";
-            this.Size = new Size(800, 600);
-            this.StartPosition = FormStartPosition.CenterParent;
+            this.Size = new Size(600, 500);
+            this.StartPosition = FormStartPosition.Manual;
+            this.Location = new Point(Screen.PrimaryScreen.WorkingArea.Width - 650, 100);
             this.BackColor = Color.FromArgb(40, 40, 40);
             this.ForeColor = Color.White;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            this.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            this.TopMost = true;
+            this.ShowInTaskbar = false;
         }
 
         private void InitializeCameraForm()
@@ -130,10 +134,22 @@ namespace RoastMyCode
             };
             _saveButton.Click += SaveButton_Click;
 
+            var sendToChatButton = new Button
+            {
+                Text = "Send to Chat",
+                Location = new Point(230, 20),
+                Size = new Size(100, 35),
+                BackColor = Color.FromArgb(0, 150, 100),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
+            };
+            sendToChatButton.Click += SendToChatButton_Click;
+
             _closeButton = new Button
             {
                 Text = "Close",
-                Location = new Point(230, 20),
+                Location = new Point(340, 20),
                 Size = new Size(100, 35),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
@@ -141,7 +157,7 @@ namespace RoastMyCode
             };
             _closeButton.Click += CloseButton_Click;
 
-            controlPanel.Controls.AddRange(new Control[] { _captureButton, _saveButton, _closeButton });
+            controlPanel.Controls.AddRange(new Control[] { _captureButton, _saveButton, sendToChatButton, _closeButton });
 
             // Add panels to form
             this.Controls.AddRange(new Control[] { cameraPanel, previewPanel, controlPanel });
@@ -240,6 +256,21 @@ namespace RoastMyCode
                 if (_capturedImage != null)
                 {
                     if (_saveButton != null) _saveButton.Enabled = true;
+                    // Enable the send to chat button
+                    foreach (Control control in this.Controls)
+                    {
+                        if (control is Panel panel)
+                        {
+                            foreach (Control panelControl in panel.Controls)
+                            {
+                                if (panelControl is Button button && button.Text == "Send to Chat")
+                                {
+                                    button.Enabled = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     MessageBox.Show("Image captured successfully!", "Capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -283,6 +314,34 @@ namespace RoastMyCode
                 {
                     MessageBox.Show($"Error saving image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        private void SendToChatButton_Click(object? sender, EventArgs e)
+        {
+            if (_capturedImage == null)
+            {
+                MessageBox.Show("No image to send. Please capture an image first.", "No Image", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // Save the image to a temporary file
+                string tempPath = Path.Combine(Path.GetTempPath(), $"RoastMyCode_Capture_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                _capturedImage.Save(tempPath, ImageFormat.Png);
+
+                // Send a message to the main form about the captured image
+                string message = $"📸 Camera capture saved to: {tempPath}";
+                
+                // Raise the event to notify the main form
+                ImageCaptured?.Invoke(this, message);
+
+                MessageBox.Show($"Image captured and sent to chat!\nPath: {tempPath}", "Capture Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error sending image to chat: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
