@@ -404,11 +404,11 @@ namespace RoastMyCode
             try
             {
                 var cameraForm = new CameraForm(_cameraService);
-                cameraForm.ImageCaptured += (s, message) => 
+                cameraForm.ImageCaptured += (s, data) => 
                 {
-                    // Add the captured image message to the chat
-                    AddChatMessage(message, "user");
-                    _conversationHistory.Add(new ChatMessage { Content = message, Role = "user" });
+                    // Add the captured image message to the chat with the actual image
+                    AddChatMessage(data.message, "user", data.image);
+                    _conversationHistory.Add(new ChatMessage { Content = data.message, Role = "user" });
                 };
                 cameraForm.Show(this); // Changed from ShowDialog() to Show() to make it non-modal
             }
