@@ -12,9 +12,17 @@ namespace RoastMyCode
         {
             // Validate message before sending
             if (string.IsNullOrWhiteSpace(rtInput.Text)) return;
-
-            AddChatMessage(rtInput.Text, "user");
-            _conversationHistory.Add(new ChatMessage { Content = rtInput.Text, Role = "user" });
+            
+            string userMessage = rtInput.Text;
+            
+            // Detect programming language from user input
+            string detectedLanguage = Services.LanguageDetector.DetectLanguage(userMessage);
+            
+            // Update the language display
+            txtLanguageDisplay.Text = detectedLanguage;
+            
+            AddChatMessage(userMessage, "user");
+            _conversationHistory.Add(new ChatMessage { Content = userMessage, Role = "user" });
             rtInput.Text = string.Empty;
 
             // Scroll to bottom using BeginInvoke to avoid layout lag

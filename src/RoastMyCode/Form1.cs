@@ -32,6 +32,8 @@ namespace RoastMyCode
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
         private ComboBox cmbAnimation = null!;
+        private TextBox txtLanguageDisplay = null!;
+        private Label lblLanguage = null!;
         private Panel titleLogoPanel = null!;
         private RichTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
