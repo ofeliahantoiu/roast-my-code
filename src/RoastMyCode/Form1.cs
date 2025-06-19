@@ -404,11 +404,28 @@ namespace RoastMyCode
             try
             {
                 var cameraForm = new CameraForm(_cameraService);
-                cameraForm.ImageCaptured += (s, data) => 
+                cameraForm.ImageCaptured += async (s, data) => 
                 {
                     // Add the captured image message to the chat with the actual image
                     AddChatMessage(data.message, "user", data.image);
                     _conversationHistory.Add(new ChatMessage { Content = data.message, Role = "user" });
+                    
+                    // Automatically roast the image
+                    try
+                    {
+                        string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                        string aiResponse = await _aiService.RoastImage(data.image, selectedLevel, _conversationHistory);
+                        
+                        // Add the AI roast response to the chat
+                        AddChatMessage(aiResponse, "assistant");
+                        _conversationHistory.Add(new ChatMessage { Role = "assistant", Content = aiResponse });
+                        
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        AddChatMessage($"Error roasting image: {ex.Message}", "system");
+                    }
                 };
                 cameraForm.Show(this); // Changed from ShowDialog() to Show() to make it non-modal
             }
