@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Ruby" extensions=".rb" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="Symbols" foreground="#9CDCFE" /> <!-- Light blue symbols -->
+  <Color name="BuiltInKeywords" foreground="#C586C0" /> <!-- Pink built-in keywords -->
+  <Color name="ClassNames" foreground="#4EC9B0" /> <!-- Teal class names -->
+  <Color name="Regex" foreground="#D16969" /> <!-- Red regular expressions -->
+
+  <RuleSet>
+    <!-- Ruby Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>#</Begin>
+    </Span>
+    
+    <!-- Ruby multiline comments =begin/=end -->
+    <Span color="Comment" multiline="true">
+      <Begin>^=begin</Begin>
+      <End>^=end</End>
+    </Span>
+
+    <!-- Ruby Strings -->
+    <Span color="String" multiline="false" escapecharacter="\\">
+      <Begin>"</Begin>
+      <End>"</End>
+    </Span>
+    
+    <Span color="String" multiline="false" escapecharacter="\\">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+    
+    <!-- Multiline strings %q() -->
+    <Span color="String" multiline="true" escapecharacter="\\">
+      <Begin>%q\(</Begin>
+      <End>\)</End>
+    </Span>
+    
+    <!-- Multiline strings %Q() -->
+    <Span color="String" multiline="true" escapecharacter="\\">
+      <Begin>%Q\(</Begin>
+      <End>\)</End>
+    </Span>
+
+    <!-- Ruby regular expressions -->
+    <Span color="Regex" multiline="true" escapecharacter="\\">
+      <Begin>/</Begin>
+      <End>/[iomxesupadlnc]*</End>
+    </Span>
+    
+    <Span color="Regex" multiline="true" escapecharacter="\\">
+      <Begin>%r\(</Begin>
+      <End>\)[iomxesupadlnc]*</End>
+    </Span>
+
+    <!-- Here documents -->
+    <Span color="String" multiline="true">
+      <Begin>(&lt;&lt;)(-?)(['"]?)(\w+)\3</Begin>
+      <End>^\4$</End>
+    </Span>
+
+    <!-- Ruby Keywords -->
+    <Keywords color="Keywords">
+      <Word>alias</Word>
+      <Word>and</Word>
+      <Word>BEGIN</Word>
+      <Word>begin</Word>
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>class</Word>
+      <Word>def</Word>
+      <Word>defined?</Word>
+      <Word>do</Word>
+      <Word>else</Word>
+      <Word>elsif</Word>
+      <Word>END</Word>
+      <Word>end</Word>
+      <Word>ensure</Word>
+      <Word>for</Word>
+      <Word>if</Word>
+      <Word>in</Word>
+      <Word>module</Word>
+      <Word>next</Word>
+      <Word>not</Word>
+      <Word>or</Word>
+      <Word>redo</Word>
+      <Word>rescue</Word>
+      <Word>retry</Word>
+      <Word>return</Word>
+      <Word>self</Word>
+      <Word>super</Word>
+      <Word>then</Word>
+      <Word>undef</Word>
+      <Word>unless</Word>
+      <Word>until</Word>
+      <Word>when</Word>
+      <Word>while</Word>
+      <Word>yield</Word>
+    </Keywords>
+
+    <!-- Built-in values -->
+    <Keywords color="BuiltInKeywords">
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>nil</Word>
+      <Word>__FILE__</Word>
+      <Word>__LINE__</Word>
+      <Word>__ENCODING__</Word>
+    </Keywords>
+
+    <!-- Method calls -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*[({]) # followed by ( or {
+    </Rule>
+
+    <!-- Numbers -->
+    <Rule color="NumberLiteral">
+      \b(0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|\d+(\.\d+)?([eE][+-]?\d+)?)\b
+    </Rule>
+
+    <!-- Symbols -->
+    <Rule color="Symbols">
+      :[a-zA-Z_][\w]*
+    </Rule>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-*/%=&lt;&gt;^!|&amp;]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

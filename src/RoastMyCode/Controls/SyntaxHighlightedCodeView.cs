@@ -320,8 +320,21 @@ namespace RoastMyCode.Controls
                     ApplyPythonEditorSettings();
                     break;
                     
+                case "ruby":
+                    ApplyRubyEditorSettings();
+                    break;
+                    
+                case "rust":
+                    ApplyRustEditorSettings();
+                    break;
+                    
+                case "go":
+                    ApplyGoEditorSettings();
+                    break;
+                    
                 default:
                     // Use default settings for other languages
+                    System.Diagnostics.Debug.WriteLine($"Using default settings for language: {language}");
                     break;
             }
         }
@@ -385,6 +398,39 @@ namespace RoastMyCode.Controls
             _editor.FontFamily = new System.Windows.Media.FontFamily("Consolas");
             _editor.FontSize = 14;
             _editor.LineNumbersForeground = System.Windows.Media.Brushes.Gray;
+        }
+        
+        /// <summary>
+        /// Apply Ruby-specific editor settings
+        /// </summary>
+        private void ApplyRubyEditorSettings()
+        {
+            _editor.FontFamily = new System.Windows.Media.FontFamily("Consolas");
+            _editor.FontSize = 14;
+            _editor.LineNumbersForeground = System.Windows.Media.Brushes.Gray;
+            _editor.TextArea.TextView.Options.EnableHyperlinks = false;
+        }
+        
+        /// <summary>
+        /// Apply Rust-specific editor settings
+        /// </summary>
+        private void ApplyRustEditorSettings()
+        {
+            _editor.FontFamily = new System.Windows.Media.FontFamily("Consolas");
+            _editor.FontSize = 14;
+            _editor.LineNumbersForeground = System.Windows.Media.Brushes.Gray;
+            _editor.TextArea.TextView.Options.EnableHyperlinks = false;
+        }
+        
+        /// <summary>
+        /// Apply Go-specific editor settings
+        /// </summary>
+        private void ApplyGoEditorSettings()
+        {
+            _editor.FontFamily = new System.Windows.Media.FontFamily("Consolas");
+            _editor.FontSize = 14;
+            _editor.LineNumbersForeground = System.Windows.Media.Brushes.Gray;
+            _editor.TextArea.TextView.Options.EnableHyperlinks = false;
         }
         
         /// <summary>

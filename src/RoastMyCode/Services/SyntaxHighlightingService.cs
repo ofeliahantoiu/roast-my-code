@@ -97,11 +97,15 @@ namespace RoastMyCode.Controls
             // Format: language name -> actual embedded resource name
             foreach (var resource in resources)
             {
-                if (resource.IndexOf("java", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
+                if (resource.IndexOf("java", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase) && !resource.Contains("script", StringComparison.OrdinalIgnoreCase))
                     _resourceMappings["java"] = resource;
                 
                 if (resource.IndexOf("csharp", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
                     _resourceMappings["csharp"] = resource;
+                    
+                // Also map C# directly as an alias to csharp
+                if (resource.IndexOf("csharp", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
+                    _resourceMappings["c#"] = resource;
                     
                 if (resource.IndexOf("javascript", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
                     _resourceMappings["javascript"] = resource;
@@ -111,7 +115,27 @@ namespace RoastMyCode.Controls
                     
                 if (resource.IndexOf("php", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
                     _resourceMappings["php"] = resource;
+                    
+                if (resource.IndexOf("ruby", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
+                    _resourceMappings["ruby"] = resource;
+                    
+                if (resource.IndexOf("rust", StringComparison.OrdinalIgnoreCase) >= 0 && resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
+                    _resourceMappings["rust"] = resource;
+                    
+                if (resource.IndexOf("go", StringComparison.OrdinalIgnoreCase) >= 0 && 
+                    !resource.Contains("mongo", StringComparison.OrdinalIgnoreCase) && 
+                    !resource.Contains("cargo", StringComparison.OrdinalIgnoreCase) && 
+                    resource.EndsWith(".xshd", StringComparison.OrdinalIgnoreCase))
+                    _resourceMappings["go"] = resource;
             }
+            
+            // Debug output of all registered mappings
+            System.Diagnostics.Debug.WriteLine("===== Registered Language Mappings =====");
+            foreach (var mapping in _resourceMappings)
+            {
+                System.Diagnostics.Debug.WriteLine($"Language '{mapping.Key}' -> Resource '{mapping.Value}'");
+            }
+            System.Diagnostics.Debug.WriteLine("=======================================");
         }
         
         /// <summary>

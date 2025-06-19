@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Go" extensions=".go" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Char" foreground="#CE9178" /> <!-- Orange characters -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="GoTypes" foreground="#4EC9B0" /> <!-- Teal type keywords -->
+  <Color name="Constants" foreground="#C586C0" /> <!-- Pink constants -->
+  <Color name="Operators" foreground="#D4D4D4" /> <!-- Light gray operators -->
+
+  <RuleSet>
+    <!-- Go Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+
+    <!-- Go Strings -->
+    <Span color="String" multiline="false" escapecharacter="\\">
+      <Begin>"</Begin>
+      <End>"</End>
+    </Span>
+    
+    <!-- Go Raw Strings -->
+    <Span color="String" multiline="true">
+      <Begin>`</Begin>
+      <End>`</End>
+    </Span>
+    
+    <!-- Go Chars -->
+    <Span color="Char" multiline="false" escapecharacter="\\">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+
+    <!-- Go Keywords -->
+    <Keywords color="Keywords">
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>chan</Word>
+      <Word>const</Word>
+      <Word>continue</Word>
+      <Word>default</Word>
+      <Word>defer</Word>
+      <Word>else</Word>
+      <Word>fallthrough</Word>
+      <Word>for</Word>
+      <Word>func</Word>
+      <Word>go</Word>
+      <Word>goto</Word>
+      <Word>if</Word>
+      <Word>import</Word>
+      <Word>interface</Word>
+      <Word>map</Word>
+      <Word>package</Word>
+      <Word>range</Word>
+      <Word>return</Word>
+      <Word>select</Word>
+      <Word>struct</Word>
+      <Word>switch</Word>
+      <Word>type</Word>
+      <Word>var</Word>
+    </Keywords>
+    
+    <!-- Go Types -->
+    <Keywords color="GoTypes">
+      <Word>bool</Word>
+      <Word>byte</Word>
+      <Word>complex64</Word>
+      <Word>complex128</Word>
+      <Word>error</Word>
+      <Word>float32</Word>
+      <Word>float64</Word>
+      <Word>int</Word>
+      <Word>int8</Word>
+      <Word>int16</Word>
+      <Word>int32</Word>
+      <Word>int64</Word>
+      <Word>rune</Word>
+      <Word>string</Word>
+      <Word>uint</Word>
+      <Word>uint8</Word>
+      <Word>uint16</Word>
+      <Word>uint32</Word>
+      <Word>uint64</Word>
+      <Word>uintptr</Word>
+      <Word>any</Word>
+    </Keywords>
+    
+    <!-- Go Constants -->
+    <Keywords color="Constants">
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>nil</Word>
+      <Word>iota</Word>
+    </Keywords>
+
+    <!-- Method calls -->
+    <Rule color="MethodCall">
+      \b[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()
+    </Rule>
+
+    <!-- Numbers -->
+    <Rule color="NumberLiteral">
+      \b(0[xX][0-9a-fA-F_]+|0[0-7_]*|[0-9][0-9_]*(\.[0-9][0-9_]*)?([eE][+-]?[0-9_]+)?)\b
+    </Rule>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-*/%=&lt;&gt;^!|&amp;:]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>
