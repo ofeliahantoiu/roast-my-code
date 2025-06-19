@@ -35,6 +35,22 @@ namespace RoastMyCode
             };
             this.Controls.Add(topPanel);
 
+            btnDownloadConversation = new Button
+            {
+                Text = "Download Conversation",
+                Location = new Point(400, 10),
+                Size = new Size(180, 30),
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F)
+            };
+            btnDownloadConversation.FlatAppearance.BorderColor = Color.FromArgb(60, 60, 60);
+            btnDownloadConversation.Click += BtnDownloadConversation_Click;
+
+            topPanel.Controls.Add(btnDownloadConversation);
+
+
             bottomPanel = new Panel
             {
                 Size = new Size(this.ClientSize.Width, 120),
