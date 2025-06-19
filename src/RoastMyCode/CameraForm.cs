@@ -20,7 +20,7 @@ namespace RoastMyCode
         private bool _isCameraRunning = false;
 
         // Event for communicating with the main form
-        public event EventHandler<string>? ImageCaptured;
+        public event EventHandler<(string message, Image image)>? ImageCaptured;
 
         public CameraForm(ICameraService cameraService)
         {
@@ -146,10 +146,21 @@ namespace RoastMyCode
             };
             sendToChatButton.Click += SendToChatButton_Click;
 
+            var sendFileButton = new Button
+            {
+                Text = "Send File",
+                Location = new Point(340, 20),
+                Size = new Size(100, 35),
+                BackColor = Color.FromArgb(150, 100, 0),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            sendFileButton.Click += SendFileButton_Click;
+
             _closeButton = new Button
             {
                 Text = "Close",
-                Location = new Point(340, 20),
+                Location = new Point(450, 20),
                 Size = new Size(100, 35),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
@@ -157,7 +168,7 @@ namespace RoastMyCode
             };
             _closeButton.Click += CloseButton_Click;
 
-            controlPanel.Controls.AddRange(new Control[] { _captureButton, _saveButton, sendToChatButton, _closeButton });
+            controlPanel.Controls.AddRange(new Control[] { _captureButton, _saveButton, sendToChatButton, sendFileButton, _closeButton });
 
             // Add panels to form
             this.Controls.AddRange(new Control[] { cameraPanel, previewPanel, controlPanel });
@@ -327,21 +338,45 @@ namespace RoastMyCode
 
             try
             {
-                // Save the image to a temporary file
-                string tempPath = Path.Combine(Path.GetTempPath(), $"RoastMyCode_Capture_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-                _capturedImage.Save(tempPath, ImageFormat.Png);
-
-                // Send a message to the main form about the captured image
-                string message = $"📸 Camera capture saved to: {tempPath}";
-                
                 // Raise the event to notify the main form
-                ImageCaptured?.Invoke(this, message);
+                ImageCaptured?.Invoke(this, ($"📸 Camera capture saved to: {Path.GetTempPath()}", _capturedImage));
 
-                MessageBox.Show($"Image captured and sent to chat!\nPath: {tempPath}", "Capture Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Image captured and sent to chat!\nPath: {Path.GetTempPath()}", "Capture Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error sending image to chat: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SendFileButton_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                using OpenFileDialog openFileDialog = new OpenFileDialog
+                {
+                    Filter = "Image Files (*.jpg;*.jpeg;*.png;*.bmp;*.gif)|*.jpg;*.jpeg;*.png;*.bmp;*.gif|All Files (*.*)|*.*",
+                    Title = "Select Image to Send to Chat"
+                };
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        var bitmap = new Bitmap(openFileDialog.FileName);
+                        string message = $"📷 Image from file: {Path.GetFileName(openFileDialog.FileName)}";
+                        ImageCaptured?.Invoke(this, (message, bitmap));
+                        MessageBox.Show($"Image sent to chat!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error loading image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
