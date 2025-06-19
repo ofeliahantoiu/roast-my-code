@@ -42,6 +42,26 @@ namespace RoastMyCode
             chatAreaPanel.ScrollControlIntoView(bubble);
         }
 
+        private void AddChatMessage(string message, string role, Image? image)
+        {
+            ChatMessageBubble bubble = new ChatMessageBubble
+            {
+                MessageText = message,
+                Role = role,
+                Image = image,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Font = _currentFont,
+                Margin = new Padding(10, 5, 10, 5)
+            };
+
+            chatAreaPanel.Controls.Add(bubble);
+            chatAreaPanel.Controls.SetChildIndex(bubble, chatAreaPanel.Controls.Count - 1); // Ensure order
+            PositionChatBubbles();
+
+            chatAreaPanel.ScrollControlIntoView(bubble);
+        }
+
         private void LoadConversationHistory()
         {
             chatAreaPanel.Controls.Clear();
