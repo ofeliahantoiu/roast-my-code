@@ -472,7 +472,7 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbUploadIcon, _isDarkMode ? "uploadlight.png" : "uploaddark.png");
-            pbUploadIcon.Click += PbCameraIcon_Click;
+            pbUploadIcon.Click += PbUploadIcon_Click;
             
             ToolTip uploadToolTip = new ToolTip
             {
@@ -498,6 +498,7 @@ namespace RoastMyCode
                 Visible = true
             };
             LoadImageFromAssets(pbCameraIcon, _isDarkMode ? "cameralight.png" : "cameradark.png");
+            pbCameraIcon.Click += PbCameraIcon_Click;
             
             ToolTip cameraToolTip = new ToolTip
             {
