@@ -18,6 +18,7 @@ namespace RoastMyCode
     {
         private readonly IConfiguration _configuration;
         private readonly IAIService _aiService;
+        private readonly ICameraService _cameraService;
         private IWavePlayer? _waveOutDevice;
         private AudioFileReader? _audioFileReader;
         private readonly List<ChatMessage> _conversationHistory;
@@ -67,6 +68,7 @@ namespace RoastMyCode
             {
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
                 _aiService = new AIService(_configuration);
+                _cameraService = new CameraService();
                 _conversationHistory = new List<ChatMessage>();
 
                 _fileUploadOptions = (FileUploadOptions?)serviceProvider.GetService(typeof(FileUploadOptions))
@@ -397,6 +399,17 @@ namespace RoastMyCode
             }
         }
 
-
+        private void PbCameraIcon_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                var cameraForm = new CameraForm(_cameraService);
+                cameraForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening camera: {ex.Message}", "Camera Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
 }
