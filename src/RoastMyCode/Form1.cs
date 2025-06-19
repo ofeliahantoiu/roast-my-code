@@ -31,6 +31,7 @@ namespace RoastMyCode
         private ComboBox cmbFontStyle = null!;
         private ComboBox cmbFontSize = null!;
         private ComboBox cmbRoastLevel = null!;
+        private ComboBox cmbAnimation = null!;
         private Panel titleLogoPanel = null!;
         private RichTextBox rtInput = null!;
         private PictureBox? pbCameraIcon;
@@ -84,6 +85,10 @@ namespace RoastMyCode
                 InitializeModernUI();
                 ApplyTheme();
                 LoadConversationHistory();
+                
+                // Initialize the animation service
+                Services.AnimationService.Instance.RegisterTarget(this);
+                Services.AnimationService.Instance.RegisterAnimatedControl(chatAreaPanel);
             }
             catch (Exception ex)
             {

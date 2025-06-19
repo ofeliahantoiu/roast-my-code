@@ -336,6 +336,80 @@ namespace RoastMyCode
             };
             leftControlsPanel.Controls.Add(cmbRoastLevel);
 
+            // Animation dropdown
+            cmbAnimation = new ComboBox
+            {
+                Size = new Size(90, 24),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.Gray,
+                Margin = new Padding(5, 0, 0, 0)
+            };
+            cmbAnimation.Items.AddRange(new string[] { "Animation", "On", "Off" });
+            cmbAnimation.SelectedIndex = 0;
+            cmbAnimation.DrawItem += (sender, e) => {
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
+                {
+                    e.Graphics.FillRectangle(brush, e.Bounds);
+                }
+                
+                if (e.Index >= 0 && e.Font != null)
+                {
+                    string text = cmbAnimation.Items[e.Index].ToString() ?? string.Empty;
+                    Color textColor = e.Index == 0 ? Color.Gray : Color.White;
+                    using (var brush = new SolidBrush(textColor))
+                    {
+                        e.Graphics.DrawString(text, e.Font, brush, e.Bounds);
+                    }
+                }
+            };
+
+            cmbAnimation.MeasureItem += (sender, e) => {
+                e.ItemHeight = 24;
+            };
+
+            cmbAnimation.DrawMode = DrawMode.OwnerDrawFixed;
+            cmbAnimation.DrawItem += (sender, e) => {
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
+                {
+                    e.Graphics.FillRectangle(brush, e.Bounds);
+                }
+
+                if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(65, 65, 65)))
+                    {
+                        e.Graphics.FillRectangle(brush, e.Bounds);
+                    }
+                }
+
+                if (e.Index >= 0 && e.Font != null)
+                {
+                    string text = cmbAnimation.Items[e.Index].ToString() ?? string.Empty;
+                    Color textColor = e.Index == 0 ? Color.Gray : Color.White;
+                    using (var brush = new SolidBrush(textColor))
+                    {
+                        e.Graphics.DrawString(text, e.Font, brush, e.Bounds);
+                    }
+                }
+            };
+            cmbAnimation.SelectedIndexChanged += (s, e) => {
+                if (cmbAnimation.SelectedIndex == 0)
+                {
+                    cmbAnimation.ForeColor = Color.Gray;
+                    Services.AnimationService.Instance.AnimationsEnabled = true; // Default to enabled
+                }
+                else
+                {
+                    cmbAnimation.ForeColor = Color.White;
+                    // Enable animations if "On" is selected (index 1), disable if "Off" is selected (index 2)
+                    Services.AnimationService.Instance.AnimationsEnabled = cmbAnimation.SelectedIndex == 1;
+                }
+            };
+            leftControlsPanel.Controls.Add(cmbAnimation);
+
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;
             inputPanel = new Panel

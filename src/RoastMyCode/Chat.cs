@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -23,7 +24,7 @@ namespace RoastMyCode
             }));
         }
 
-        private void AddChatMessage(string message, string role)
+        private async void AddChatMessage(string message, string role)
         {
             ChatMessageBubble bubble = new ChatMessageBubble
             {
@@ -40,6 +41,44 @@ namespace RoastMyCode
             PositionChatBubbles();
 
             chatAreaPanel.ScrollControlIntoView(bubble);
+            
+            // Trigger shake animation when it's an assistant message (a roast)
+            if (role == "assistant")
+            {
+                // Get the selected roast level or default to "Savage"
+                string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                
+                // Only trigger animation if it's enabled in the animation dropdown (index 1 is "On")
+                if (cmbAnimation.SelectedIndex == 1) 
+                {
+                    try
+                    {
+                        // Register key UI elements for animation
+                        Services.AnimationService.Instance.RegisterAnimatedControl(bubble);
+                        Services.AnimationService.Instance.RegisterAnimatedControl(chatAreaPanel);
+                        
+                        // Add more UI elements to affect based on intensity
+                        if (selectedLevel == "Savage" || selectedLevel == "Brutal")
+                        {
+                            Services.AnimationService.Instance.RegisterAnimatedControl(inputPanel);
+                        }
+                        
+                        // For brutal roasts, add even more shake targets
+                        if (selectedLevel == "Brutal")
+                        {
+                            Services.AnimationService.Instance.RegisterTarget(this);
+                        }
+                        
+                        // Trigger shake animation with intensity based on the roast level
+                        await Services.AnimationService.Instance.ShakeAsync(selectedLevel);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Just log or ignore animation errors so they don't disrupt the app
+                        Debug.WriteLine($"Animation error: {ex.Message}");
+                    }
+                }
+            }
         }
 
         private void LoadConversationHistory()
