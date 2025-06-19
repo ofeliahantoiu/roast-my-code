@@ -166,7 +166,36 @@ namespace RoastMyCode.Services
 
         private Bitmap MatToBitmap(Mat mat)
         {
-            return (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(mat.ToBytes()));
+            try
+            {
+                if (mat == null || mat.Empty())
+                {
+                    return new Bitmap(1, 1); // Return a minimal valid bitmap
+                }
+
+                var bytes = mat.ToBytes();
+                if (bytes == null || bytes.Length == 0)
+                {
+                    return new Bitmap(1, 1); // Return a minimal valid bitmap
+                }
+
+                using var stream = new MemoryStream(bytes);
+                var bitmap = new Bitmap(stream);
+                
+                // Validate the created bitmap
+                if (bitmap.Width <= 0 || bitmap.Height <= 0)
+                {
+                    bitmap.Dispose();
+                    return new Bitmap(1, 1); // Return a minimal valid bitmap
+                }
+
+                return bitmap;
+            }
+            catch (Exception)
+            {
+                // Return a minimal valid bitmap if conversion fails
+                return new Bitmap(1, 1);
+            }
         }
 
         private void UpdatePreview(Bitmap bitmap)
