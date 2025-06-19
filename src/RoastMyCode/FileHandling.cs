@@ -11,7 +11,7 @@ namespace RoastMyCode
 {
     public partial class Form1 : Form
     {        
-        private async void PbCameraIcon_Click(object? sender, EventArgs e)
+        private async void PbUploadIcon_Click(object? sender, EventArgs e)
         {
             try
             {
