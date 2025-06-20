@@ -101,6 +101,7 @@ namespace RoastMyCode
 
         private string DetectLanguage(string fileName, string? content = null)
         {
+            // First try the filename-based detection for exact matches and special files
             string fileNameLower = Path.GetFileName(fileName).ToLowerInvariant();
             if (_languageMap.ContainsKey(fileNameLower)) return _languageMap[fileNameLower];
 
@@ -109,11 +110,62 @@ namespace RoastMyCode
                 if (fileName.Replace("\\", "/").Contains(pattern)) return _languageMap[pattern];
             }
 
+            // Try extension-based detection
             string extension = Path.GetExtension(fileName).ToLowerInvariant();
-            if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension)) return _languageMap[extension];
-
-            if (string.IsNullOrEmpty(extension) && !string.IsNullOrEmpty(content))
+            if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension)) 
             {
+                // For specific extensions that might need additional content-based verification
+                if (extension == ".rs" || extension == ".go" || extension == ".rb" || extension == ".php" || extension == ".java")
+                {
+                    // Make sure we have the content for improved detection
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        // Use the improved language detector for better accuracy
+                        string detectedLanguage = Services.LanguageDetector.DetectLanguage(content);
+                        
+                        // Map the detected language to our display names
+                        switch (detectedLanguage.ToLowerInvariant())
+                        {
+                            case "rust": return "Rust";
+                            case "go": return "Go";
+                            case "ruby": return "Ruby";
+                            case "php": return "PHP";
+                            case "java": return "Java";
+                            // Only use the detector result if it found one of our target languages
+                        }
+                    }
+                }
+                
+                return _languageMap[extension];
+            }
+
+            // Content-based detection for extensionless files
+            if (!string.IsNullOrEmpty(content))
+            {
+                // Try the advanced language detector first
+                string detectedLanguage = Services.LanguageDetector.DetectLanguage(content);
+                if (detectedLanguage != "text")
+                {
+                    // Map common detector language codes to our display names
+                    switch (detectedLanguage.ToLowerInvariant())
+                    {
+                        case "csharp": return "C#";
+                        case "javascript": return "JavaScript";
+                        case "typescript": return "TypeScript";
+                        case "python": return "Python";
+                        case "java": return "Java";
+                        case "php": return "PHP";
+                        case "ruby": return "Ruby";
+                        case "go": return "Go";
+                        case "rust": return "Rust";
+                        case "html": return "HTML";
+                        case "css": return "CSS";
+                        case "sql": return "SQL";
+                        default: return detectedLanguage.Substring(0, 1).ToUpper() + detectedLanguage.Substring(1);
+                    }
+                }
+                
+                // Fall back to shebang-based detection for scripts
                 if (content.StartsWith("#!"))
                 {
                     if (content.Contains("python")) return "Python Script";
@@ -123,6 +175,8 @@ namespace RoastMyCode
                     if (content.Contains("ruby")) return "Ruby Script";
                     if (content.Contains("perl")) return "Perl Script";
                 }
+                
+                // Simple content-based detection for markup languages
                 if (content.TrimStart().StartsWith("<?xml")) return "XML";
                 if (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("["))
                 {
