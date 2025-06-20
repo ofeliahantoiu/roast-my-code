@@ -85,8 +85,8 @@ namespace RoastMyCode
             this.Margin = new Padding(12);
             this.MaximumSize = new Size(600, 0);
             
-            // Set up padding and margin with further increased padding
-            this.Padding = new Padding(25, 30, 25, 15);
+            // Set up moderate padding and margin to ensure text and code stay within bubble boundaries
+            this.Padding = new Padding(20, 25, 20, 20);
             this.Margin = new Padding(15, 20, 15, 15);
             
             // Default colors
@@ -250,8 +250,10 @@ namespace RoastMyCode
                     languageLabelHeight = languageSize.Height + 10;
                 }
 
-                // Calculate total height
+                // Calculate total height and width
                 int contentHeight = textSize.Height + imageSize.Height;
+                int contentWidth = Math.Max(textSize.Width, imageSize.Width);
+                
                 if (textSize.Height > 0 && imageSize.Height > 0)
                 {
                     contentHeight += 10; // Spacing between text and image
@@ -263,14 +265,20 @@ namespace RoastMyCode
                 // Add extra space for code blocks
                 if (_isCodeBlock && _role == "user")
                 {
-                    // Code blocks need more space
+                    // Calculate appropriate space for code blocks with more moderate padding
                     int codeLines = _messageText.Split('\n').Length;
-                    int codeHeight = Math.Max(codeLines * 20, 100); // Estimate height based on line count
-                    totalHeight = Math.Max(totalHeight, codeHeight + 40); // Add padding
+                    int codeHeight = Math.Max(codeLines * 20, 150); // More reasonable height estimate based on line count
+                    totalHeight = Math.Max(totalHeight, codeHeight + 80); // Moderate additional padding
+                    
+                    // Calculate width based on content while keeping reasonable margins
+                    int maxLineLength = _messageText.Split('\n').Max(line => line.Length);
+                    int estimatedCodeWidth = Math.Max(maxLineLength * 10, contentWidth + 80); // More efficient width estimation
+                    contentWidth = Math.Max(contentWidth, estimatedCodeWidth);
+                    
+                    // Enforce sensible minimum dimensions for code blocks
+                    contentWidth = Math.Max(contentWidth, 350);
+                    totalHeight = Math.Max(totalHeight, 180);
                 }
-
-                // Set width and height
-                int contentWidth = Math.Max(textSize.Width, imageSize.Width);
                 this.Width = Math.Min(contentWidth + Padding.Horizontal, MaximumSize.Width);
                 this.Height = Math.Max(totalHeight, MinimumSize.Height);
 
@@ -643,15 +651,26 @@ namespace RoastMyCode
                 
                 // Calculate proper margins for the code view to be inside the bubble
                 // with proper padding (similar to ChatGPT style)
-                int codeMargin = 10;
+                // Use more reasonable insets to optimize code display area while keeping it inside the bubble
+                int codeMarginX = 25; // Moderate margin from left/right edges
+                int codeMarginTop = 45; // Moderate margin from top for language badge
+                int codeMarginBottom = 25; // Moderate margin from bottom
                 
-                // Position and size the code view within the bubble
+                // Position and size the code view within the bubble with very generous safety margin
                 Rectangle bubbleContentRect = new Rectangle(
-                    codeMargin,
-                    codeMargin + 5, // Add a bit more space at the top for the language badge
-                    this.Width - (codeMargin * 2),
-                    this.Height - (codeMargin * 2) - 5
+                    codeMarginX,
+                    codeMarginTop,
+                    this.Width - (codeMarginX * 2),
+                    this.Height - codeMarginTop - codeMarginBottom
                 );
+                
+                // Ensure the bubble is always big enough to contain the code view with proper margins
+                if (bubbleContentRect.Width < 300) bubbleContentRect.Width = 300;
+                if (bubbleContentRect.Height < 100) bubbleContentRect.Height = 100;
+                
+                // Apply size adjustments if the content area is too small
+                if (bubbleContentRect.Width < 0) bubbleContentRect.Width = 0;
+                if (bubbleContentRect.Height < 0) bubbleContentRect.Height = 0;
                 
                 // Set the code view position and size
                 _codeView.Location = bubbleContentRect.Location;
