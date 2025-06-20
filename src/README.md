@@ -1,57 +1,118 @@
-# Roast My Code
+# RoastMyCode 🍖
 
-A Windows Forms application that uses AI to provide humorous feedback on your code snippets.
+A Windows desktop application that uses AI to roast your code with dark and smart humor. Capture your device camera, upload files, or type your code directly to get entertaining feedback from an AI assistant.
 
-## Features
+## Features 
 
-- Paste your code and get AI-generated feedback
-- Choose from different roast levels: Light, Savage, or Helpful
-- Simple and intuitive user interface
-- Secure API key management
+- **AI-Powered Code Roasting**: Get humorous and witty feedback on your code
+- **Camera Integration**: Capture screenshots of you camera directly from the app
+- **File Upload**: Upload code files for roasting
+- **Text-to-Speech**: Have the AI responses read aloud
+- **Dark/Light Theme**: Toggle between themes for comfortable coding
+- **Conversation History**: Save and download your roasting sessions
+- **Multiple Roast Levels**: Choose from light to savage roasting intensity
+- **Image Display**: View captured photos directly in chat bubbles
 
-## Prerequisites
+## Prerequisites 
 
-- .NET 6.0 or later
-- Visual Studio 2022 or Visual Studio Code
-- OpenAI API key
+### Required Software
+- **.NET 6.0 SDK** or later
+- **Windows 10/11** (Windows Forms application)
+- **Visual Studio 2022** 
 
-## Setup
+### Optional but Recommended
+- **Webcam/Camera** for screenshot capture functionality
+- **Speakers/Headphones** for text-to-speech output
 
-1. Clone the repository:
+## Installation and Running
+
+### Method 1: Clone and Build 
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd roast-my-code/src
    ```
-   git clone https://github.com/yourusername/RoastMyCode.git
+
+2. **Navigate to the project directory**
+   ```bash
+   cd RoastMyCode
    ```
 
-2. Create a `.env` file in the project root directory and add your OpenAI API key:
+3. **Restore dependencies**
+   ```bash
+   dotnet restore
    ```
-   OPENAI_API_KEY=your_api_key_here
+
+4. **Build the project**
+   ```bash
+   dotnet build
    ```
+5. **Run the project**
+   ```bash
+   dotnet run
+   ```
+ 
+### Method 2: Visual Studio
 
-3. Open the solution in Visual Studio or Visual Studio Code
+1. **Open Visual Studio 2022**
+2. **Open the solution file**: `RoastMyCode.sln`
+3. **Restore NuGet packages** (Visual Studio should do this automatically)
+4. **Build the solution** (Ctrl+Shift+B)
+5. **Press F5** or click the "Start" button
 
-4. Install required NuGet packages:
-   - Newtonsoft.Json
+## Configuration 
 
-5. Build and run the application
+### API Keys Setup
 
-## Usage
+The application requires API keys for AI services. In the `gitignore` please comment out this file `appsettings.json`. There is another file that should contain the key, if you encounter any issue with the AI not working please sure that the key is also here`src\RoastMyCode\bin\Debug\net6.0-windows\appsettings.json`.
 
-1. Launch the application
-2. Paste your code into the input text box
-3. Select your desired roast level from the dropdown
-4. Click "Roast My Code"
-5. Wait for the AI response
-6. Read the feedback in the output text box
+## Usage Guide 📖
 
-## Security Notes
+### Basic Usage
 
-- Never commit your `.env` file to version control
-- Keep your API key secure and don't share it with others
+1. **Launch the application**
+2. **Type your code** in the input area or use one of the input methods below
+3. **Select roast level** (Light, Medium, Savage)
+4. **Click Send** or press Enter
+5. **Enjoy the AI's humorous feedback!**
 
-## Contributing
+### Input Methods
 
-Feel free to submit issues and enhancement requests!
+#### Text Input
+- Type or paste your code directly into the input box
+- Supports all programming languages
 
-## License
+#### Camera Capture
+- Click the camera icon
+- Select your camera from the dropdown
+- Click "Start Camera" to begin preview
+- Click "Capture" to take a screenshot
+- Click "Send to Chat" to roast the captured image
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+#### File Upload
+- Click the upload icon
+- Select code files or ZIP archives
+- Supported formats: `.txt`, `.cs`, `.js`, `.py`, `.java`, `.cpp`, `.html`, `.css`, etc.
+- ZIP files are automatically extracted and processed
+
+
+### Features
+
+#### heme Toggle
+- Click the theme icon to switch between dark and light modes
+
+#### Text-to-Speech
+- Select voice type (Male/Female)
+- AI last response will be read aloud automatically
+
+#### Conversation History
+- All conversations are saved automatically
+- Click "Download Conversation" to save as text file
+
+#### Roast Levels
+- **Light**: Gentle, constructive feedback
+- **Medium**: Balanced humor and criticism
+- **Savage**: Brutal, hilarious roasting
+
+**Happy Coding and Roasting!**  

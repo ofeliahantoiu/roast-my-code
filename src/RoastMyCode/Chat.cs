@@ -17,11 +17,11 @@ namespace RoastMyCode
             rtInput.Text = string.Empty;
         }
 
-        private void AddChatMessage(string message, string role)
+        private void AddChatMessage(string message, string role, Image? image = null)
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(() => AddChatMessage(message, role)));
+                Invoke(new Action(() => AddChatMessage(message, role, image)));
                 return;
             }
 
@@ -37,6 +37,7 @@ namespace RoastMyCode
             {
                 MessageText = message,
                 Role = role,
+                Image = image,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Font = _currentFont,
@@ -79,7 +80,7 @@ namespace RoastMyCode
             // Load messages in chronological order (oldest first)
             foreach (var message in _conversationHistory)
             {
-                AddChatMessage(message.Content, message.Role);
+                AddChatMessage(message.Content, message.Role, message.Image);
             }
 
             chatAreaPanel.ResumeLayout(true);

@@ -329,13 +329,18 @@ namespace RoastMyCode
 
                 try
                 {
-                    // Add user message with photo indicator
+                    // Add user message with photo indicator and the captured image
                     string photoMessage = "📷 Photo captured";
+                    Image? clonedImage = null;
+                    if (data.image != null)
+                    {
+                        try { clonedImage = (Image)data.image.Clone(); } catch { clonedImage = null; }
+                    }
                     chatAreaPanel.SuspendLayout();
                     try
                     {
-                        AddChatMessage(photoMessage, "user");
-                        _conversationHistory.Add(new ChatMessage { Content = photoMessage, Role = "user" });
+                        AddChatMessage(photoMessage, "user", clonedImage);
+                        _conversationHistory.Add(new ChatMessage { Content = photoMessage, Role = "user", Image = clonedImage });
                         PositionChatBubbles();
                     }
                     finally
