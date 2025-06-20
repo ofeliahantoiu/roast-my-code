@@ -39,7 +39,6 @@ namespace RoastMyCode
             btnDownloadConversation = new Button
             {
                 Text = "Download Conversation",
-                Location = new Point(400, 10),
                 Size = new Size(180, 30),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
@@ -48,7 +47,16 @@ namespace RoastMyCode
             };
             btnDownloadConversation.FlatAppearance.BorderColor = Color.FromArgb(60, 60, 60);
             btnDownloadConversation.Click += BtnDownloadConversation_Click;
-
+            
+            // Center the button horizontally
+            btnDownloadConversation.Location = new Point((this.ClientSize.Width - btnDownloadConversation.Width) / 2, 10);
+            
+            // Adjust button position on resize
+            this.Resize += (s, e) =>
+            {
+                btnDownloadConversation.Location = new Point((this.ClientSize.Width - btnDownloadConversation.Width) / 2, 10);
+            };
+            
             topPanel.Controls.Add(btnDownloadConversation);
 
             bottomPanel = new Panel
@@ -486,6 +494,19 @@ namespace RoastMyCode
 
             leftControlsPanel.Controls.Add(cmbVoiceType);
             
+            // Create right corner panel for language display
+            FlowLayoutPanel rightControlsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                Padding = new Padding(0, 10, 10, 0),
+                BackColor = Color.Transparent
+            };
+            topPanel.Controls.Add(rightControlsPanel);
+            
             // Add simple language display label
             lblLanguage = new Label
             {
@@ -494,10 +515,10 @@ namespace RoastMyCode
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.Gray,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(10, 3, 0, 0),
+                Margin = new Padding(0, 3, 5, 0),
                 BackColor = Color.Transparent
             };
-            leftControlsPanel.Controls.Add(lblLanguage);
+            rightControlsPanel.Controls.Add(lblLanguage);
             
             // Add simple language display textbox
             txtLanguageDisplay = new TextBox
@@ -512,7 +533,7 @@ namespace RoastMyCode
                 Margin = new Padding(5, 0, 0, 0),
                 TextAlign = HorizontalAlignment.Center
             };
-            leftControlsPanel.Controls.Add(txtLanguageDisplay);
+            rightControlsPanel.Controls.Add(txtLanguageDisplay);
             
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;

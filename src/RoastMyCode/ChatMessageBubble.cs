@@ -85,9 +85,9 @@ namespace RoastMyCode
             this.Margin = new Padding(12);
             this.MaximumSize = new Size(600, 0);
             
-            // Set up padding and margin
-            this.Padding = new Padding(15, 10, 15, 10);
-            this.Margin = new Padding(12, 8, 12, 8);
+            // Set up padding and margin with further increased padding
+            this.Padding = new Padding(25, 30, 25, 15);
+            this.Margin = new Padding(15, 20, 15, 15);
             
             // Default colors
             _bubbleColor = Color.FromArgb(52, 58, 64); // Dark gray for assistant
