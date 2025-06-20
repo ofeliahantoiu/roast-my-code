@@ -16,16 +16,33 @@ namespace RoastMyCode.Controls
         // Static property to store the list of available resources (for debugging)
         public static List<string> AvailableResources { get; private set; } = new List<string>();
         
+        // Track whether initialization was completed successfully
+        private bool _isInitialized = false;
+        
         public SyntaxHighlightingService()
         {
             _highlightingDefinitions = new Dictionary<string, IHighlightingDefinition>(StringComparer.OrdinalIgnoreCase);
             _resourceMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             
-            // Initialize resource mappings
-            InitializeResourceMappings();
-            
-            // Initialize built-in highlighting definitions
-            InitializeBuiltInDefinitions();
+            try
+            {
+                // Initialize resource mappings
+                InitializeResourceMappings();
+                
+                // Initialize built-in highlighting definitions
+                InitializeBuiltInDefinitions();
+                
+                // Ensure critical language definitions are loaded 
+                EnsureCriticalDefinitionsLoaded();
+                
+                _isInitialized = true;
+                System.Diagnostics.Debug.WriteLine("Syntax highlighting service initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing syntax highlighting service: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
         }
         
         /// <summary>
@@ -39,14 +56,35 @@ namespace RoastMyCode.Controls
             // Normalize language name
             language = language.ToLowerInvariant().Trim();
             
-            // Check if we already have this definition
+            // Detailed debug logging
+            System.Diagnostics.Debug.WriteLine($"GetDefinition called for language: '{language}'");
+            
+            // Check if we already have this definition in cache
             if (_highlightingDefinitions.TryGetValue(language, out var definition))
+            {
+                System.Diagnostics.Debug.WriteLine($"Found cached definition for '{language}'");
                 return definition;
+            }
+            
+            // Special handling for specific languages that might be failing
+            if (language == "rust" || language == "ruby" || language == "go" || language == "csharp" || language == "c#")
+            {
+                // Force reload for these languages
+                System.Diagnostics.Debug.WriteLine($"Attempting special handling for '{language}'");
+                definition = ForceLoadDefinition(language);
+                if (definition != null)
+                {
+                    _highlightingDefinitions[language] = definition;
+                    return definition;
+                }
+            }
                 
             // Try to load from built-in resources
+            System.Diagnostics.Debug.WriteLine($"Trying to load built-in definition for '{language}'");
             definition = TryLoadBuiltInDefinition(language);
             if (definition != null)
             {
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded built-in definition for '{language}'");
                 _highlightingDefinitions[language] = definition;
                 return definition;
             }
@@ -54,9 +92,11 @@ namespace RoastMyCode.Controls
             // Try to load from AvalonEdit's built-in definitions
             try
             {
+                System.Diagnostics.Debug.WriteLine($"Trying AvalonEdit built-in definition for '{language}'");
                 definition = HighlightingManager.Instance.GetDefinition(language);
                 if (definition != null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"Found AvalonEdit built-in definition for '{language}'");
                     _highlightingDefinitions[language] = definition;
                     return definition;
                 }
@@ -66,6 +106,7 @@ namespace RoastMyCode.Controls
                 System.Diagnostics.Debug.WriteLine($"Error loading highlighting definition for {language}: {ex.Message}");
             }
             
+            System.Diagnostics.Debug.WriteLine($"No definition found for '{language}'");
             return null; // Return null when no definition is found
         }
         
@@ -258,6 +299,126 @@ namespace RoastMyCode.Controls
         }
         
         /// <summary>
+        /// Ensure critical language definitions are loaded properly
+        /// </summary>
+        private void EnsureCriticalDefinitionsLoaded()
+        {
+            // These are the languages that need special handling
+            string[] criticalLanguages = new[] { "csharp", "c#", "ruby", "rust", "go" };
+            
+            foreach (var language in criticalLanguages)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ensuring critical definition for '{language}' is loaded");
+                
+                // Force load the definition
+                var definition = ForceLoadDefinition(language);
+                if (definition != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Successfully preloaded definition for '{language}'");
+                    _highlightingDefinitions[language] = definition;
+                    
+                    // Add aliases for C#
+                    if (language == "csharp")
+                    {
+                        _highlightingDefinitions["c#"] = definition;
+                        _highlightingDefinitions["cs"] = definition;
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to preload definition for '{language}'");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Force load a syntax definition for languages that need special handling
+        /// </summary>
+        private IHighlightingDefinition? ForceLoadDefinition(string language)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"Force loading definition for '{language}'");
+                
+                // Use consistent names for xshd resources
+                string resourceName;
+                switch (language.ToLowerInvariant())
+                {
+                    case "csharp":
+                    case "c#":
+                    case "cs":
+                        resourceName = "CSharp.xshd";
+                        break;
+                    case "ruby":
+                    case "rb":
+                        resourceName = "Ruby.xshd";
+                        break;
+                    case "rust":
+                    case "rs":
+                        resourceName = "Rust.xshd";
+                        break;
+                    case "go":
+                    case "golang":
+                        resourceName = "Go.xshd";
+                        break;
+                    default:
+                        return null;
+                }
+                
+                // Try multiple resource name formats
+                string[] possiblePaths = {
+                    $"RoastMyCode.Resources.{resourceName}",
+                    $"Resources.{resourceName}",
+                    resourceName,
+                    $"d:\\Universitate\\AppDev\\roast-my-code\\src\\RoastMyCode\\Resources\\{resourceName}"
+                };
+                
+                foreach (var path in possiblePaths)
+                {
+                    try
+                    {
+                        // Try embedded resources first
+                        using (Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path))
+                        {
+                            if (stream != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Found resource stream for '{path}'");
+                                using (XmlReader reader = XmlReader.Create(stream))
+                                {
+                                    return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+                                }
+                            }
+                        }
+                        
+                        // If not found as embedded resource, try loading directly from file
+                        if (File.Exists(path))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Loading definition from file: '{path}'");
+                            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+                            using (XmlReader reader = XmlReader.Create(fs))
+                            {
+                                return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error trying path {path}: {ex.Message}");
+                        // Continue to try the next path
+                    }
+                }
+                
+                // Final attempt - try to load from AvalonEdit's built-in definitions
+                return HighlightingManager.Instance.GetDefinition(language);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ForceLoadDefinition for {language}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Map language name to resource name
         /// </summary>
         private string? MapLanguageToResourceName(string language)
@@ -282,6 +443,15 @@ namespace RoastMyCode.Controls
                     return "RoastMyCode.Resources.Python.xshd";
                 case "php":
                     return "RoastMyCode.Resources.PHP.xshd";
+                case "ruby":
+                case "rb":
+                    return "RoastMyCode.Resources.Ruby.xshd";
+                case "rust":
+                case "rs":
+                    return "RoastMyCode.Resources.Rust.xshd";
+                case "go":
+                case "golang":
+                    return "RoastMyCode.Resources.Go.xshd";
                 default:
                     // Check resource mappings as a fallback
                     if (_resourceMappings.TryGetValue(language, out var resourceName))

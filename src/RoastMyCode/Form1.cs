@@ -53,6 +53,8 @@ namespace RoastMyCode
         private Panel inputPanel = null!;
         private TextCounterDisplay textCounter = null!;
 
+        private string _lastDetectedLanguage = "Unknown";
+
         private readonly Dictionary<string, string> _languageMap = new(StringComparer.OrdinalIgnoreCase)
         {
             [".cs"] = "C#", [".js"] = "JavaScript", [".ts"] = "TypeScript",
@@ -194,6 +196,29 @@ namespace RoastMyCode
             }
 
             return "Unknown";
+        }
+
+        /// <summary>
+        /// Updates the language display in the UI
+        /// </summary>
+        /// <param name="language">The detected programming language</param>
+        private void UpdateLanguageDisplay(string language)
+        {
+            // Update the language display in the UI
+            if (txtLanguageDisplay != null && !string.IsNullOrEmpty(language) && language != "Unknown")
+            {
+                // Ensure UI updates happen on the UI thread
+                if (txtLanguageDisplay.InvokeRequired)
+                {
+                    txtLanguageDisplay.Invoke(new Action(() => UpdateLanguageDisplay(language)));
+                    return;
+                }
+                
+                // Update the language textbox
+                txtLanguageDisplay.Text = language;
+                txtLanguageDisplay.ForeColor = Color.LimeGreen;
+                txtLanguageDisplay.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            }
         }
 
         private void ChatAreaPanel_Resize(object? sender, EventArgs e)

@@ -510,7 +510,7 @@ namespace RoastMyCode
             // Add simple language display label
             lblLanguage = new Label
             {
-                Text = "Current programming language:",
+                Text = "Current language used:",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.Gray,

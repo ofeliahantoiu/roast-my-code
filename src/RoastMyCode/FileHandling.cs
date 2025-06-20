@@ -80,6 +80,9 @@ namespace RoastMyCode
                                     {
                                         _uploadedFiles[displayName] = content;
                                         fileContents.Add($"=== {displayName} ({language}) ===\n{content}");
+                                        
+                                        // Store the detected language for display
+                                        UpdateLanguageDisplay(language);
                                     }
                                 }
                             }
@@ -98,6 +101,8 @@ namespace RoastMyCode
                             if (_uploadedFiles.Count > 0)
                             {
                                 ShowDownloadButton();
+                                
+                                // Last detected language is tracked in Form1
                                 
                                 // Trigger AI response
                                 string aiResponse = await _aiService.ProcessFiles(_uploadedFiles, cmbRoastLevel.SelectedItem?.ToString() ?? "light");
@@ -210,6 +215,9 @@ namespace RoastMyCode
                             _uploadedFiles[displayName] = content;
                             processedFiles.Add(displayName);
                             fileLanguages[displayName] = language;
+                            
+                            // Store the detected language for display
+                            UpdateLanguageDisplay(language);
                         }
                     }
                     catch (Exception ex)
