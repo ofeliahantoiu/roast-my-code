@@ -1,0 +1,169 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Java" extensions=".java" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- Reference: https://github.com/icsharpcode/AvalonEdit/blob/master/ICSharpCode.AvalonEdit/Highlighting/Resources/Java.xshd -->
+  
+  <!-- The colors are based on ChatGPT-style highlighting -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Char" foreground="#CE9178" /> <!-- Orange characters -->
+  <Color name="Preprocessor" foreground="#569CD6" /> <!-- Blue preprocessor -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="ValueTypeKeywords" foreground="#C586C0" /> <!-- Pink type keywords (int, double, etc) -->
+  <Color name="ReferenceTypeKeywords" foreground="#569CD6" /> <!-- Blue reference type keywords -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="ThisOrBaseReference" foreground="#569CD6" /> <!-- Blue this/super -->
+  <Color name="NullOrValueKeywords" foreground="#569CD6" /> <!-- Blue null/true/false -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="GotoKeywords" foreground="#C586C0" /> <!-- Pink goto keywords -->
+  <Color name="ContextKeywords" foreground="#569CD6" /> <!-- Blue context keywords -->
+  <Color name="ExceptionKeywords" foreground="#569CD6" /> <!-- Blue exception keywords -->
+  <Color name="CheckedKeyword" foreground="#569CD6" /> <!-- Blue checked keywords -->
+  <Color name="UncheckedKeyword" foreground="#569CD6" /> <!-- Blue unchecked keywords -->
+  <Color name="OperatorKeywords" foreground="#569CD6" /> <!-- Blue operator keywords -->
+  <Color name="ParameterModifiers" foreground="#569CD6" /> <!-- Blue parameter modifiers -->
+  <Color name="Modifiers" foreground="#569CD6" /> <!-- Blue modifiers like public/private -->
+  <Color name="Visibility" foreground="#569CD6" /> <!-- Blue visibility modifiers -->
+  <Color name="NamespaceKeywords" foreground="#569CD6" /> <!-- Blue namespace keywords -->
+  <Color name="GetSetAddRemove" foreground="#569CD6" /> <!-- Blue get/set -->
+  <Color name="TrueFalse" foreground="#569CD6" /> <!-- Blue true/false -->
+  <Color name="TypeKeywords" foreground="#569CD6" /> <!-- Blue type keywords -->
+  <Color name="SemanticKeywords" foreground="#C586C0" /> <!-- Pink semantic keywords -->
+
+  <RuleSet>
+    <!-- No external imports to avoid dependency issues -->
+    
+    <!-- Mark previous rule -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+    
+    <!-- Strings -->
+    <Span color="String" multiline="false">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="Char" multiline="false">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      \b
+      (    \d+(\.[0-9]+)?   #number with optional floating point
+      |    \.[0-9]+         #or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)? # optional exponent
+      [fFdDlL]?
+    </Rule>
+    
+    <!-- Keywords -->
+    <Keywords color="Modifiers">
+      <Word>public</Word>
+      <Word>protected</Word>
+      <Word>private</Word>
+      <Word>static</Word>
+      <Word>final</Word>
+      <Word>abstract</Word>
+      <Word>native</Word>
+      <Word>volatile</Word>
+      <Word>transient</Word>
+      <Word>synchronized</Word>
+    </Keywords>
+    
+    <Keywords color="ValueTypeKeywords">
+      <Word>boolean</Word>
+      <Word>byte</Word>
+      <Word>char</Word>
+      <Word>double</Word>
+      <Word>float</Word>
+      <Word>int</Word>
+      <Word>long</Word>
+      <Word>short</Word>
+      <Word>void</Word>
+    </Keywords>
+    
+    <Keywords color="ReferenceTypeKeywords">
+      <Word>class</Word>
+      <Word>interface</Word>
+      <Word>enum</Word>
+      <Word>extends</Word>
+      <Word>implements</Word>
+      <Word>package</Word>
+      <Word>throws</Word>
+    </Keywords>
+    
+    <Keywords color="OperatorKeywords">
+      <Word>new</Word>
+      <Word>instanceof</Word>
+      <Word>super</Word>
+      <Word>this</Word>
+    </Keywords>
+    
+    <Keywords color="ExceptionKeywords">
+      <Word>try</Word>
+      <Word>catch</Word>
+      <Word>finally</Word>
+      <Word>throw</Word>
+    </Keywords>
+    
+    <Keywords color="ContextKeywords">
+      <Word>return</Word>
+      <Word>break</Word>
+      <Word>continue</Word>
+      <Word>default</Word>
+      <Word>do</Word>
+      <Word>while</Word>
+      <Word>for</Word>
+      <Word>switch</Word>
+      <Word>if</Word>
+      <Word>else</Word>
+      <Word>case</Word>
+      <Word>assert</Word>
+    </Keywords>
+    
+    <Keywords color="TrueFalse">
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>null</Word>
+    </Keywords>
+    
+    <Keywords color="SemanticKeywords">
+      <Word>var</Word>
+    </Keywords>
+    
+    <!-- Mark previous rule -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

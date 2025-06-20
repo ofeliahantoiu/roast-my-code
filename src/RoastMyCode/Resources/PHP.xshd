@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="PHP" extensions=".php" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="Modifiers" foreground="#569CD6" /> <!-- Blue modifiers -->
+  <Color name="Types" foreground="#C586C0" /> <!-- Pink types -->
+  <Color name="PHPTag" foreground="#569CD6" /> <!-- Blue PHP tags -->
+  <Color name="Variables" foreground="#9CDCFE" /> <!-- Light blue variables -->
+  <Color name="BuiltInFunctions" foreground="#4EC9B0" /> <!-- Teal built-in functions -->
+
+  <RuleSet>
+    <!-- PHP tags -->
+    <Span color="PHPTag" multiline="false">
+      <Begin>&lt;\?php</Begin>
+      <End>\?&gt;</End>
+    </Span>
+    
+    <Span color="PHPTag" multiline="false">
+      <Begin>&lt;\?=</Begin>
+      <End>\?&gt;</End>
+    </Span>
+    
+    <!-- Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="false">
+      <Begin>\#</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+    
+    <!-- Strings -->
+    <Span color="String" multiline="false">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+        <Rule color="Variables">\$[\w]+</Rule>
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="false">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <!-- Variable highlighting -->
+    <Rule color="Variables">
+      \$[\w]+
+    </Rule>
+    
+    <!-- Mark method calls -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      \b
+      (    \d+(\.[0-9]+)?   # number with optional floating point
+      |    \.[0-9]+         # or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)?   # optional exponent
+    </Rule>
+    
+    <!-- Keywords -->
+    <Keywords color="Keywords">
+      <Word>abstract</Word>
+      <Word>and</Word>
+      <Word>as</Word>
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>catch</Word>
+      <Word>class</Word>
+      <Word>clone</Word>
+      <Word>const</Word>
+      <Word>continue</Word>
+      <Word>declare</Word>
+      <Word>default</Word>
+      <Word>do</Word>
+      <Word>else</Word>
+      <Word>elseif</Word>
+      <Word>enddeclare</Word>
+      <Word>endfor</Word>
+      <Word>endforeach</Word>
+      <Word>endif</Word>
+      <Word>endswitch</Word>
+      <Word>endwhile</Word>
+      <Word>extends</Word>
+      <Word>final</Word>
+      <Word>finally</Word>
+      <Word>for</Word>
+      <Word>foreach</Word>
+      <Word>function</Word>
+      <Word>global</Word>
+      <Word>goto</Word>
+      <Word>if</Word>
+      <Word>implements</Word>
+      <Word>include</Word>
+      <Word>include_once</Word>
+      <Word>instanceof</Word>
+      <Word>insteadof</Word>
+      <Word>interface</Word>
+      <Word>match</Word>
+      <Word>namespace</Word>
+      <Word>new</Word>
+      <Word>or</Word>
+      <Word>print</Word>
+      <Word>private</Word>
+      <Word>protected</Word>
+      <Word>public</Word>
+      <Word>readonly</Word>
+      <Word>require</Word>
+      <Word>require_once</Word>
+      <Word>return</Word>
+      <Word>static</Word>
+      <Word>switch</Word>
+      <Word>throw</Word>
+      <Word>trait</Word>
+      <Word>try</Word>
+      <Word>use</Word>
+      <Word>var</Word>
+      <Word>while</Word>
+      <Word>xor</Word>
+      <Word>yield</Word>
+      <Word>yield from</Word>
+    </Keywords>
+    
+    <!-- Types -->
+    <Keywords color="Types">
+      <Word>array</Word>
+      <Word>bool</Word>
+      <Word>boolean</Word>
+      <Word>callable</Word>
+      <Word>double</Word>
+      <Word>float</Word>
+      <Word>int</Word>
+      <Word>integer</Word>
+      <Word>iterable</Word>
+      <Word>mixed</Word>
+      <Word>null</Word>
+      <Word>object</Word>
+      <Word>resource</Word>
+      <Word>string</Word>
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>void</Word>
+    </Keywords>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;=:]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

@@ -1,0 +1,236 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Python" extensions=".py" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="BuiltInFunctions" foreground="#4EC9B0" /> <!-- Teal built-in functions -->
+  <Color name="SpecialMethods" foreground="#DCDCAA" /> <!-- Yellow special methods -->
+  <Color name="Decorators" foreground="#C586C0" /> <!-- Pink decorators -->
+  <Color name="BuiltInExceptions" foreground="#4EC9B0" /> <!-- Teal built-in exceptions -->
+
+  <RuleSet>
+    <!-- Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>\#</Begin>
+    </Span>
+    
+    <!-- Multi-line strings -->
+    <Span color="String" multiline="true">
+      <Begin>'''</Begin>
+      <End>'''</End>
+    </Span>
+    
+    <Span color="String" multiline="true">
+      <Begin>"""</Begin>
+      <End>"""</End>
+    </Span>
+    
+    <!-- Strings -->
+    <Span color="String" multiline="false">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="false">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <!-- Prefixed strings (r"", f"", b"", etc) -->
+    <Span color="String" multiline="false">
+      <Begin>(r|u|f|fr|rf|b|br|rb)(")</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="false">
+      <Begin>(r|u|f|fr|rf|b|br|rb)(')</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <!-- Decorators -->
+    <Rule color="Decorators">
+      ^@[\w\.]+
+    </Rule>
+    
+    <!-- Mark method calls -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      \b0[oO][0-7]+        # octal number
+      |
+      \b0[bB][01]+         # binary number
+      |
+      \b
+      (    \d+(\.[0-9]+)?   # number with optional floating point
+      |    \.[0-9]+         # or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)?   # optional exponent
+      [jJ]?                # optional j for complex numbers
+    </Rule>
+    
+    <!-- Keywords -->
+    <Keywords color="Keywords">
+      <Word>and</Word>
+      <Word>as</Word>
+      <Word>assert</Word>
+      <Word>async</Word>
+      <Word>await</Word>
+      <Word>break</Word>
+      <Word>class</Word>
+      <Word>continue</Word>
+      <Word>def</Word>
+      <Word>del</Word>
+      <Word>elif</Word>
+      <Word>else</Word>
+      <Word>except</Word>
+      <Word>False</Word>
+      <Word>finally</Word>
+      <Word>for</Word>
+      <Word>from</Word>
+      <Word>global</Word>
+      <Word>if</Word>
+      <Word>import</Word>
+      <Word>in</Word>
+      <Word>is</Word>
+      <Word>lambda</Word>
+      <Word>None</Word>
+      <Word>nonlocal</Word>
+      <Word>not</Word>
+      <Word>or</Word>
+      <Word>pass</Word>
+      <Word>raise</Word>
+      <Word>return</Word>
+      <Word>True</Word>
+      <Word>try</Word>
+      <Word>while</Word>
+      <Word>with</Word>
+      <Word>yield</Word>
+    </Keywords>
+    
+    <!-- Built-in functions -->
+    <Keywords color="BuiltInFunctions">
+      <Word>abs</Word>
+      <Word>all</Word>
+      <Word>any</Word>
+      <Word>ascii</Word>
+      <Word>bin</Word>
+      <Word>bool</Word>
+      <Word>bytearray</Word>
+      <Word>bytes</Word>
+      <Word>callable</Word>
+      <Word>chr</Word>
+      <Word>classmethod</Word>
+      <Word>compile</Word>
+      <Word>complex</Word>
+      <Word>delattr</Word>
+      <Word>dict</Word>
+      <Word>dir</Word>
+      <Word>divmod</Word>
+      <Word>enumerate</Word>
+      <Word>eval</Word>
+      <Word>exec</Word>
+      <Word>filter</Word>
+      <Word>float</Word>
+      <Word>format</Word>
+      <Word>frozenset</Word>
+      <Word>getattr</Word>
+      <Word>globals</Word>
+      <Word>hasattr</Word>
+      <Word>hash</Word>
+      <Word>help</Word>
+      <Word>hex</Word>
+      <Word>id</Word>
+      <Word>input</Word>
+      <Word>int</Word>
+      <Word>isinstance</Word>
+      <Word>issubclass</Word>
+      <Word>iter</Word>
+      <Word>len</Word>
+      <Word>list</Word>
+      <Word>locals</Word>
+      <Word>map</Word>
+      <Word>max</Word>
+      <Word>memoryview</Word>
+      <Word>min</Word>
+      <Word>next</Word>
+      <Word>object</Word>
+      <Word>oct</Word>
+      <Word>open</Word>
+      <Word>ord</Word>
+      <Word>pow</Word>
+      <Word>print</Word>
+      <Word>property</Word>
+      <Word>range</Word>
+      <Word>repr</Word>
+      <Word>reversed</Word>
+      <Word>round</Word>
+      <Word>set</Word>
+      <Word>setattr</Word>
+      <Word>slice</Word>
+      <Word>sorted</Word>
+      <Word>staticmethod</Word>
+      <Word>str</Word>
+      <Word>sum</Word>
+      <Word>super</Word>
+      <Word>tuple</Word>
+      <Word>type</Word>
+      <Word>vars</Word>
+      <Word>zip</Word>
+      <Word>__import__</Word>
+    </Keywords>
+    
+    <!-- Special methods -->
+    <Keywords color="SpecialMethods">
+      <Word>__init__</Word>
+      <Word>__str__</Word>
+      <Word>__repr__</Word>
+      <Word>__len__</Word>
+      <Word>__getitem__</Word>
+      <Word>__setitem__</Word>
+      <Word>__delitem__</Word>
+      <Word>__call__</Word>
+      <Word>__enter__</Word>
+      <Word>__exit__</Word>
+      <Word>__add__</Word>
+      <Word>__sub__</Word>
+      <Word>__mul__</Word>
+      <Word>__truediv__</Word>
+      <Word>__floordiv__</Word>
+      <Word>__mod__</Word>
+      <Word>__eq__</Word>
+      <Word>__ne__</Word>
+      <Word>__lt__</Word>
+      <Word>__le__</Word>
+      <Word>__gt__</Word>
+      <Word>__ge__</Word>
+    </Keywords>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;=:]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

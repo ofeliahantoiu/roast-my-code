@@ -51,7 +51,10 @@ namespace RoastMyCode.Services
 
             { "php", new List<(string, double)>
                 {
-                    (@"<\?php", 2.0), (@"\becho\b", 1.2), (@"\bvar_dump\b", 1.2), (@"\$[a-zA-Z_]\w*", 0.8)
+                    (@"<\?php", 2.0), (@"\becho\b", 1.5), (@"\bvar_dump\b", 1.5), (@"\$[a-zA-Z_]\w*", 1.2),
+                    (@"\bfunction\s+\w+\s*\(", 1.4), (@"\bforeach\s*\(", 1.3), (@"->\w+\s*\(", 1.3),
+                    (@"\b(include|require)(_once)?\b", 1.4), (@"\breturn\s+\$", 1.3), (@"=>", 1.2),
+                    (@"\$_(GET|POST|SERVER|SESSION|COOKIE)", 1.5), (@"mysqli_", 1.4), (@"PDO", 1.4)
                 }
             },
 
@@ -66,6 +69,32 @@ namespace RoastMyCode.Services
                 {
                     (@"\binterface\b", 1.3), (@"\btype\b", 1.2), (@"\bPromise\b", 1.2), (@"\breadonly\b", 1.0),
                     (@"\bimplements\b", 1.0), (@"\bconst\b", 0.9), (@"\bfunction\b", 0.9)
+                }
+            },
+            
+            { "go", new List<(string, double)>
+                {
+                    (@"\bpackage\s+main\b", 2.0), (@"\bfunc\b", 1.5), (@"\bimport\s+\(", 1.3),
+                    (@"\bfmt\.Print", 1.3), (@"\btype\s+\w+\s+struct\b", 1.3), (@"\bgo\s+func\b", 1.2),
+                    (@"\bdefer\b", 1.2), (@"\bvar\b", 0.9), (@"\bconst\b", 0.9), (@"\binterface\{\}", 1.2)
+                }
+            },
+            
+            { "rust", new List<(string, double)>
+                {
+                    (@"\bfn\s+\w+\b", 2.0), (@"\blet\s+mut\b", 1.5), (@"\bRust\b", 1.3),
+                    (@"\bmod\b", 1.3), (@"\buse\s+std::", 1.5), (@"\bstruct\b", 1.2), (@"\benum\b", 1.2),
+                    (@"\bimpl\b", 1.4), (@"\bpub\b", 1.0), (@"::\b", 1.0), (@"\btrait\b", 1.3),
+                    (@"\bResult<", 1.2), (@"\bOption<", 1.2), (@"\bunwrap\(\)", 1.4)
+                }
+            },
+            
+            { "ruby", new List<(string, double)>
+                {
+                    (@"\bdef\s+\w+\b", 1.5), (@"\bend\b", 1.3), (@"\bmodule\b", 1.3),
+                    (@"\brequire\b", 1.2), (@"\battr_", 1.4), (@"\bdo\s+\|\w+\|\b", 1.5),
+                    (@"\bclass\b\s+\w+\s*<\s*\w+", 1.5), (@"::new", 1.2), (@"\bnil\b", 1.2),
+                    (@"\bputs\b", 1.3), (@"\.each\s+do\b", 1.4)
                 }
             }
         };
@@ -94,8 +123,20 @@ namespace RoastMyCode.Services
             }
 
             var sorted = languageScores.OrderByDescending(x => x.Value).ToList();
+            
+            // Debug scoring for troubleshooting issues with language detection
+            Console.WriteLine($"Language Scores: {string.Join(", ", sorted.Select(x => $"{x.Key}={x.Value:F2}"))}");
 
-            if (sorted[0].Value == 0 || (sorted.Count > 1 && sorted[0].Value - sorted[1].Value < 1.5))
+            // If no matches at all, return text
+            if (sorted[0].Value == 0)
+                return "text";
+                
+            // If we have a clear winner with at least 2.0 points, return it regardless of the difference
+            if (sorted[0].Value >= 2.0)
+                return sorted[0].Key;
+                
+            // If the difference between top scores is small, be more cautious
+            if (sorted.Count > 1 && sorted[0].Value - sorted[1].Value < 1.2)
                 return "text";
 
             return sorted[0].Key;
@@ -103,9 +144,18 @@ namespace RoastMyCode.Services
 
         private static bool LooksLikePlainText(string code)
         {
-            bool noCodeSymbols = !Regex.IsMatch(code, @"[{}();<>]|class|function|def|console|print|echo", RegexOptions.IgnoreCase);
+            // Extended pattern to catch common code constructs across multiple languages including Go, Rust, Ruby, and PHP
+            bool noCodeSymbols = !Regex.IsMatch(code, @"[{}();<>:\[\]]|class|function|def|console|print|echo|func|fn|impl|trait|module|package|use|\blet\b|\bvar\b|\$[a-zA-Z_]|->|=>|::", RegexOptions.IgnoreCase);
+            
+            // Check if common language-specific patterns exist
+            bool hasCommonCodePatterns = Regex.IsMatch(code, @"\bfunc\b|\bpackage\b|\bimport\b|\bfn\b|\blet\b|\bmod\b|\bimpl\b|\bdef\b|\bend\b|\bdo\b|\bclass\b|\bmodule\b|<\?php|\$[a-zA-Z_]\w*|\bpub\b|\bconst\b|\bstruct\b", RegexOptions.IgnoreCase);
+            
             bool manyWords = code.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 10;
             bool fewLines = code.Count(c => c == '\n') < 5;
+            
+            // If it has common code patterns, it's definitely not plain text
+            if (hasCommonCodePatterns) return false;
+            
             return noCodeSymbols && manyWords && fewLines;
         }
     }

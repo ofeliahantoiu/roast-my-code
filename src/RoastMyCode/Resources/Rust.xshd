@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Rust" extensions=".rs" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Char" foreground="#CE9178" /> <!-- Orange characters -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="TypeKeywords" foreground="#4EC9B0" /> <!-- Teal type keywords -->
+  <Color name="Macros" foreground="#C586C0" /> <!-- Pink macros -->
+  <Color name="Attributes" foreground="#9CDCFE" /> <!-- Light blue attributes -->
+  <Color name="Lifetime" foreground="#D16969" /> <!-- Red lifetimes -->
+
+  <RuleSet>
+    <!-- Rust Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+
+    <!-- Rust documentation comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>///</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="false">
+      <Begin>//!</Begin>
+    </Span>
+
+    <!-- Strings -->
+    <Span color="String" multiline="false" escapecharacter="\\">
+      <Begin>"</Begin>
+      <End>"</End>
+    </Span>
+    
+    <!-- Raw strings -->
+    <Span color="String" multiline="true">
+      <Begin>r#*"</Begin>
+      <End>"#*</End>
+    </Span>
+    
+    <!-- Char -->
+    <Span color="Char" multiline="false" escapecharacter="\\">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+
+    <!-- Attributes -->
+    <Span color="Attributes" multiline="true">
+      <Begin>\#\[</Begin>
+      <End>\]</End>
+    </Span>
+
+    <!-- Keywords -->
+    <Keywords color="Keywords">
+      <Word>as</Word>
+      <Word>async</Word>
+      <Word>await</Word>
+      <Word>break</Word>
+      <Word>const</Word>
+      <Word>continue</Word>
+      <Word>crate</Word>
+      <Word>dyn</Word>
+      <Word>else</Word>
+      <Word>enum</Word>
+      <Word>extern</Word>
+      <Word>false</Word>
+      <Word>fn</Word>
+      <Word>for</Word>
+      <Word>if</Word>
+      <Word>impl</Word>
+      <Word>in</Word>
+      <Word>let</Word>
+      <Word>loop</Word>
+      <Word>match</Word>
+      <Word>mod</Word>
+      <Word>move</Word>
+      <Word>mut</Word>
+      <Word>pub</Word>
+      <Word>ref</Word>
+      <Word>return</Word>
+      <Word>self</Word>
+      <Word>Self</Word>
+      <Word>static</Word>
+      <Word>struct</Word>
+      <Word>super</Word>
+      <Word>trait</Word>
+      <Word>true</Word>
+      <Word>type</Word>
+      <Word>unsafe</Word>
+      <Word>use</Word>
+      <Word>where</Word>
+      <Word>while</Word>
+      <Word>yield</Word>
+    </Keywords>
+    
+    <!-- Type keywords -->
+    <Keywords color="TypeKeywords">
+      <Word>bool</Word>
+      <Word>char</Word>
+      <Word>f32</Word>
+      <Word>f64</Word>
+      <Word>i8</Word>
+      <Word>i16</Word>
+      <Word>i32</Word>
+      <Word>i64</Word>
+      <Word>i128</Word>
+      <Word>isize</Word>
+      <Word>u8</Word>
+      <Word>u16</Word>
+      <Word>u32</Word>
+      <Word>u64</Word>
+      <Word>u128</Word>
+      <Word>usize</Word>
+      <Word>str</Word>
+      <Word>String</Word>
+      <Word>Vec</Word>
+      <Word>Option</Word>
+      <Word>Result</Word>
+    </Keywords>
+
+    <!-- Macro calls -->
+    <Rule color="Macros">
+      \b[a-zA-Z_][a-zA-Z0-9_]*!
+    </Rule>
+
+    <!-- Lifetime annotations -->
+    <Rule color="Lifetime">
+      \'[a-zA-Z_][a-zA-Z0-9_]*
+    </Rule>
+    
+    <!-- Method calls -->
+    <Rule color="MethodCall">
+      \b[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()
+    </Rule>
+
+    <!-- Numbers -->
+    <Rule color="NumberLiteral">
+      \b(0x[0-9a-fA-F_]+|0o[0-7_]+|0b[01_]+|[0-9][0-9_]*(\.[0-9][0-9_]*)?([eE][+-]?[0-9_]+)?)\b
+    </Rule>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-*/%=&lt;&gt;^!|&amp;:]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

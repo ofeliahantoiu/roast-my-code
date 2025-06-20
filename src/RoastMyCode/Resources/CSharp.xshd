@@ -1,0 +1,246 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="C#" extensions=".cs" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Char" foreground="#CE9178" /> <!-- Orange characters -->
+  <Color name="Preprocessor" foreground="#569CD6" /> <!-- Blue preprocessor -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="ValueTypeKeywords" foreground="#C586C0" /> <!-- Pink type keywords (int, double, etc) -->
+  <Color name="ReferenceTypeKeywords" foreground="#569CD6" /> <!-- Blue reference type keywords -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="ThisOrBaseReference" foreground="#569CD6" /> <!-- Blue this/super -->
+  <Color name="NullOrValueKeywords" foreground="#569CD6" /> <!-- Blue null/true/false -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="GotoKeywords" foreground="#C586C0" /> <!-- Pink goto keywords -->
+  <Color name="ContextKeywords" foreground="#569CD6" /> <!-- Blue context keywords -->
+  <Color name="ExceptionKeywords" foreground="#569CD6" /> <!-- Blue exception keywords -->
+  <Color name="CheckedKeyword" foreground="#569CD6" /> <!-- Blue checked keywords -->
+  <Color name="UncheckedKeyword" foreground="#569CD6" /> <!-- Blue unchecked keywords -->
+  <Color name="OperatorKeywords" foreground="#569CD6" /> <!-- Blue operator keywords -->
+  <Color name="ParameterModifiers" foreground="#569CD6" /> <!-- Blue parameter modifiers -->
+  <Color name="Modifiers" foreground="#569CD6" /> <!-- Blue modifiers like public/private -->
+  <Color name="Visibility" foreground="#569CD6" /> <!-- Blue visibility modifiers -->
+  <Color name="NamespaceKeywords" foreground="#569CD6" /> <!-- Blue namespace keywords -->
+  <Color name="GetSetAddRemove" foreground="#569CD6" /> <!-- Blue get/set -->
+  <Color name="TrueFalse" foreground="#569CD6" /> <!-- Blue true/false -->
+  <Color name="TypeKeywords" foreground="#569CD6" /> <!-- Blue type keywords -->
+  <Color name="SemanticKeywords" foreground="#C586C0" /> <!-- Pink semantic keywords -->
+  <Color name="DocComment" foreground="#6A9955" /> <!-- Green doc comments -->
+
+  <RuleSet name="XmlDoc/DocCommentSet">
+    <Keywords color="DocComment">
+      <Word>c</Word>
+      <Word>code</Word>
+      <Word>example</Word>
+      <Word>exception</Word>
+      <Word>include</Word>
+      <Word>list</Word>
+      <Word>para</Word>
+      <Word>param</Word>
+      <Word>paramref</Word>
+      <Word>permission</Word>
+      <Word>remarks</Word>
+      <Word>returns</Word>
+      <Word>see</Word>
+      <Word>seealso</Word>
+      <Word>summary</Word>
+      <Word>value</Word>
+    </Keywords>
+  </RuleSet>
+
+  <RuleSet>
+    <!-- Mark previous rule -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+    
+    <Span color="DocComment" multiline="true" ruleSet="XmlDoc/DocCommentSet">
+      <Begin>///</Begin>
+    </Span>
+    
+    <!-- Strings -->
+    <Span color="String" multiline="false">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="true">
+      <Begin>@"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin='""' end=""/>
+      </RuleSet>
+    </Span>
+    
+    <Span color="Char" multiline="false">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="Preprocessor" multiline="false">
+      <Begin>\#</Begin>
+    </Span>
+    
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      \b
+      (    \d+(\.[0-9]+)?   #number with optional floating point
+      |    \.[0-9]+         #or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)? # optional exponent
+      [fFdDlLuUmM]?
+    </Rule>
+    
+    <!-- Keywords -->
+    <Keywords color="Modifiers">
+      <Word>public</Word>
+      <Word>protected</Word>
+      <Word>private</Word>
+      <Word>internal</Word>
+      <Word>static</Word>
+      <Word>readonly</Word>
+      <Word>sealed</Word>
+      <Word>abstract</Word>
+      <Word>virtual</Word>
+      <Word>override</Word>
+      <Word>new</Word>
+      <Word>const</Word>
+      <Word>extern</Word>
+      <Word>partial</Word>
+      <Word>volatile</Word>
+      <Word>async</Word>
+    </Keywords>
+    
+    <Keywords color="ValueTypeKeywords">
+      <Word>bool</Word>
+      <Word>byte</Word>
+      <Word>char</Word>
+      <Word>decimal</Word>
+      <Word>double</Word>
+      <Word>enum</Word>
+      <Word>float</Word>
+      <Word>int</Word>
+      <Word>long</Word>
+      <Word>sbyte</Word>
+      <Word>short</Word>
+      <Word>struct</Word>
+      <Word>uint</Word>
+      <Word>ulong</Word>
+      <Word>ushort</Word>
+      <Word>void</Word>
+    </Keywords>
+    
+    <Keywords color="ReferenceTypeKeywords">
+      <Word>class</Word>
+      <Word>interface</Word>
+      <Word>delegate</Word>
+      <Word>object</Word>
+      <Word>string</Word>
+      <Word>dynamic</Word>
+      <Word>record</Word>
+    </Keywords>
+    
+    <Keywords color="OperatorKeywords">
+      <Word>this</Word>
+      <Word>base</Word>
+      <Word>as</Word>
+      <Word>is</Word>
+      <Word>new</Word>
+      <Word>sizeof</Word>
+      <Word>typeof</Word>
+      <Word>nameof</Word>
+      <Word>stackalloc</Word>
+      <Word>checked</Word>
+      <Word>unchecked</Word>
+      <Word>default</Word>
+    </Keywords>
+    
+    <Keywords color="NamespaceKeywords">
+      <Word>namespace</Word>
+      <Word>using</Word>
+      <Word>global</Word>
+    </Keywords>
+    
+    <Keywords color="ExceptionKeywords">
+      <Word>try</Word>
+      <Word>throw</Word>
+      <Word>catch</Word>
+      <Word>finally</Word>
+    </Keywords>
+    
+    <Keywords color="ContextKeywords">
+      <Word>var</Word>
+      <Word>when</Word>
+      <Word>where</Word>
+      <Word>get</Word>
+      <Word>set</Word>
+      <Word>add</Word>
+      <Word>remove</Word>
+      <Word>value</Word>
+      <Word>alias</Word>
+      <Word>yield</Word>
+      <Word>select</Word>
+      <Word>group</Word>
+      <Word>by</Word>
+      <Word>into</Word>
+      <Word>from</Word>
+      <Word>ascending</Word>
+      <Word>descending</Word>
+      <Word>orderby</Word>
+      <Word>let</Word>
+      <Word>join</Word>
+      <Word>on</Word>
+      <Word>equals</Word>
+    </Keywords>
+    
+    <Keywords color="GotoKeywords">
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>continue</Word>
+      <Word>default</Word>
+      <Word>do</Word>
+      <Word>else</Word>
+      <Word>for</Word>
+      <Word>foreach</Word>
+      <Word>goto</Word>
+      <Word>if</Word>
+      <Word>else</Word>
+      <Word>switch</Word>
+      <Word>while</Word>
+      <Word>return</Word>
+    </Keywords>
+    
+    <Keywords color="TrueFalse">
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>null</Word>
+    </Keywords>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

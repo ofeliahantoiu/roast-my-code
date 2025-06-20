@@ -360,6 +360,7 @@ namespace RoastMyCode
             };
             leftControlsPanel.Controls.Add(cmbRoastLevel);
 
+            // Voice type dropdown
             cmbVoiceType = new ComboBox
             {
                 Size = new Size(80, 24),
@@ -368,10 +369,85 @@ namespace RoastMyCode
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.Gray,
-                Margin = new Padding(5, 0, 0, 0),
+                Margin = new Padding(5, 0, 5, 0),
                 DrawMode = DrawMode.OwnerDrawFixed
             };
+            
+            // Animation dropdown
+            cmbAnimation = new ComboBox
+            {
+                Size = new Size(90, 24),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.Gray,
+                Margin = new Padding(5, 0, 0, 0)
+            };
+            cmbAnimation.Items.AddRange(new string[] { "Animation", "On", "Off" });
+            cmbAnimation.SelectedIndex = 0;
+            cmbAnimation.DrawItem += (sender, e) => {
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
+                {
+                    e.Graphics.FillRectangle(brush, e.Bounds);
+                }
+                
+                if (e.Index >= 0 && e.Font != null)
+                {
+                    string text = cmbAnimation.Items[e.Index].ToString() ?? string.Empty;
+                    Color textColor = e.Index == 0 ? Color.Gray : Color.White;
+                    using (var brush = new SolidBrush(textColor))
+                    {
+                        e.Graphics.DrawString(text, e.Font, brush, e.Bounds);
+                    }
+                }
+            };
 
+            cmbAnimation.MeasureItem += (sender, e) => {
+                e.ItemHeight = 24;
+            };
+
+            cmbAnimation.DrawMode = DrawMode.OwnerDrawFixed;
+            cmbAnimation.DrawItem += (sender, e) => {
+                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
+                {
+                    e.Graphics.FillRectangle(brush, e.Bounds);
+                }
+
+                if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(65, 65, 65)))
+                    {
+                        e.Graphics.FillRectangle(brush, e.Bounds);
+                    }
+                }
+
+                if (e.Index >= 0 && e.Font != null)
+                {
+                    string text = cmbAnimation.Items[e.Index].ToString() ?? string.Empty;
+                    Color textColor = e.Index == 0 ? Color.Gray : Color.White;
+                    using (var brush = new SolidBrush(textColor))
+                    {
+                        e.Graphics.DrawString(text, e.Font, brush, e.Bounds);
+                    }
+                }
+            };
+            cmbAnimation.SelectedIndexChanged += (s, e) => {
+                if (cmbAnimation.SelectedIndex == 0)
+                {
+                    cmbAnimation.ForeColor = Color.Gray;
+                    Services.AnimationService.Instance.AnimationsEnabled = true; // Default to enabled
+                }
+                else
+                {
+                    cmbAnimation.ForeColor = Color.White;
+                    // Enable animations if "On" is selected (index 1), disable if "Off" is selected (index 2)
+                    Services.AnimationService.Instance.AnimationsEnabled = cmbAnimation.SelectedIndex == 1;
+                }
+            };
+            leftControlsPanel.Controls.Add(cmbAnimation);
+            
+            // Voice type configuration
             cmbVoiceType.DrawItem += (sender, e) => {
                 using (var brush = new SolidBrush(Color.FromArgb(45, 45, 48)))
                 {
@@ -409,7 +485,35 @@ namespace RoastMyCode
             };
 
             leftControlsPanel.Controls.Add(cmbVoiceType);
-
+            
+            // Add simple language display label
+            lblLanguage = new Label
+            {
+                Text = "Current programming language:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.Gray,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(10, 3, 0, 0),
+                BackColor = Color.Transparent
+            };
+            leftControlsPanel.Controls.Add(lblLanguage);
+            
+            // Add simple language display textbox
+            txtLanguageDisplay = new TextBox
+            {
+                Size = new Size(100, 24),
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.Gray,
+                BorderStyle = BorderStyle.FixedSingle,
+                ReadOnly = true,
+                Text = "Unknown",
+                Margin = new Padding(5, 0, 0, 0),
+                TextAlign = HorizontalAlignment.Center
+            };
+            leftControlsPanel.Controls.Add(txtLanguageDisplay);
+            
             int inputPanelWidth = 800;
             int inputPanelHeight = 44;
             inputPanel = new Panel
@@ -580,6 +684,20 @@ namespace RoastMyCode
             inputPanel.Controls.Add(rtInput);
             leftIconsPanel.BringToFront();
             sendButtonPanel.BringToFront();
+
+            // Add text counter display below the input panel
+            textCounter = new TextCounterDisplay
+            {
+                Size = new Size(120, 20),
+                Location = new Point(leftIconsPanel.Width + 5, rtInput.Bottom + 5),
+                Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+                BackColor = Color.Transparent,
+                IsDarkMode = _isDarkMode
+            };
+            
+            // Connect the counter to the rtInput for live updates
+            textCounter.ConnectToTextBox(rtInput);
+            bottomPanel.Controls.Add(textCounter);
 
             rtInput.TextChanged += (s, e) =>
             {

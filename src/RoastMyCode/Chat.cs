@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -11,13 +12,21 @@ namespace RoastMyCode
         {
             // Validate message before sending
             if (string.IsNullOrWhiteSpace(rtInput.Text)) return;
-
-            AddChatMessage(rtInput.Text, "user");
-            _conversationHistory.Add(new ChatMessage { Content = rtInput.Text, Role = "user" });
+            
+            string userMessage = rtInput.Text;
+            
+            // Detect programming language from user input
+            string detectedLanguage = Services.LanguageDetector.DetectLanguage(userMessage);
+            
+            // Update the language display
+            txtLanguageDisplay.Text = detectedLanguage;
+            
+            AddChatMessage(userMessage, "user");
+            _conversationHistory.Add(new ChatMessage { Content = userMessage, Role = "user" });
             rtInput.Text = string.Empty;
         }
 
-        private void AddChatMessage(string message, string role, Image? image = null)
+        private async void AddChatMessage(string message, string role, Image? image = null)
         {
             if (InvokeRequired)
             {
@@ -41,7 +50,7 @@ namespace RoastMyCode
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Font = _currentFont,
-                Margin = new Padding(12)
+                Margin = new Padding(10, 15, 10, 15) // Increased vertical spacing (top/bottom) to 15px
             };
 
             // Set initial position
@@ -70,6 +79,44 @@ namespace RoastMyCode
             
             // Scroll to the new message
             chatAreaPanel.ScrollControlIntoView(bubble);
+            
+            // Trigger shake animation when it's an assistant message (a roast)
+            if (role == "assistant")
+            {
+                // Get the selected roast level or default to "Savage"
+                string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                
+                // Only trigger animation if it's enabled in the animation dropdown (index 1 is "On")
+                if (cmbAnimation.SelectedIndex == 1) 
+                {
+                    try
+                    {
+                        // Register key UI elements for animation
+                        Services.AnimationService.Instance.RegisterAnimatedControl(bubble);
+                        Services.AnimationService.Instance.RegisterAnimatedControl(chatAreaPanel);
+                        
+                        // Add more UI elements to affect based on intensity
+                        if (selectedLevel == "Savage" || selectedLevel == "Brutal")
+                        {
+                            Services.AnimationService.Instance.RegisterAnimatedControl(inputPanel);
+                        }
+                        
+                        // For brutal roasts, add even more shake targets
+                        if (selectedLevel == "Brutal")
+                        {
+                            Services.AnimationService.Instance.RegisterTarget(this);
+                        }
+                        
+                        // Trigger shake animation with intensity based on the roast level
+                        await Services.AnimationService.Instance.ShakeAsync(selectedLevel);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Just log or ignore animation errors so they don't disrupt the app
+                        Debug.WriteLine($"Animation error: {ex.Message}");
+                    }
+                }
+            }
         }
 
         private void LoadConversationHistory()
@@ -125,7 +172,10 @@ namespace RoastMyCode
 
                     // Position vertically with proper spacing
                     bubble.Top = currentY;
-                    currentY = bubble.Bottom + bubble.Margin.Bottom;
+
+                    // Add additional vertical spacing between bubbles (5% of panel height)
+                    int additionalSpacing = (int)(chatAreaPanel.Height * 0.05);
+                    currentY += bubble.Height + bubble.Margin.Vertical + additionalSpacing;
                 }
             }
 

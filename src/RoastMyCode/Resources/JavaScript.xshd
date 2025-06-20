@@ -1,0 +1,168 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="JavaScript" extensions=".js" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- ChatGPT-style syntax highlighting colors -->
+  <Color name="Comment" foreground="#6A9955" /> <!-- Green comments -->
+  <Color name="String" foreground="#CE9178" /> <!-- Orange strings -->
+  <Color name="Regex" foreground="#D16969" /> <!-- Red regex -->
+  <Color name="Punctuation" foreground="#D4D4D4" /> <!-- Light gray punctuation -->
+  <Color name="MethodCall" foreground="#DCDCAA" /> <!-- Yellow method calls -->
+  <Color name="NumberLiteral" foreground="#B5CEA8" /> <!-- Light green numbers -->
+  <Color name="Keywords" foreground="#569CD6" /> <!-- Blue keywords -->
+  <Color name="Constants" foreground="#569CD6" /> <!-- Blue constants -->
+  <Color name="FunctionKeywords" foreground="#569CD6" /> <!-- Blue function keywords -->
+  <Color name="LoopKeywords" foreground="#C586C0" /> <!-- Pink loop keywords -->
+  <Color name="OperatorKeywords" foreground="#569CD6" /> <!-- Blue operator keywords -->
+  <Color name="GlobalObjects" foreground="#4EC9B0" /> <!-- Teal global objects -->
+  <Color name="FutureKeywords" foreground="#569CD6" /> <!-- Blue future keywords -->
+
+  <RuleSet>
+    <!-- Mark previous rule -->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+    
+    <!-- Comments -->
+    <Span color="Comment" multiline="false">
+      <Begin>//</Begin>
+    </Span>
+    
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+    
+    <!-- Strings -->
+    <Span color="String" multiline="false">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="false">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+    
+    <Span color="String" multiline="true">
+      <Begin>`</Begin>
+      <End>`</End>
+      <RuleSet>
+        <Span begin="\\" end="." />
+        <Span begin="\$\{" end="}" color="Punctuation" />
+      </RuleSet>
+    </Span>
+    
+    <!-- Regular expressions -->
+    <Span color="Regex" multiline="false">
+      <Begin>/[^/*]</Begin>
+      <End>/[gimsuy]*</End>
+    </Span>
+    
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      \b0[oO][0-7]+        # octal number
+      |
+      \b0[bB][01]+         # binary number
+      |
+      \b
+      (    \d+(\.[0-9]+)?   # number with optional floating point
+      |    \.[0-9]+         # or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)?   # optional exponent
+    </Rule>
+    
+    <!-- Keywords -->
+    <Keywords color="Keywords">
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>catch</Word>
+      <Word>class</Word>
+      <Word>const</Word>
+      <Word>continue</Word>
+      <Word>debugger</Word>
+      <Word>default</Word>
+      <Word>delete</Word>
+      <Word>do</Word>
+      <Word>else</Word>
+      <Word>export</Word>
+      <Word>extends</Word>
+      <Word>false</Word>
+      <Word>finally</Word>
+      <Word>for</Word>
+      <Word>function</Word>
+      <Word>if</Word>
+      <Word>import</Word>
+      <Word>in</Word>
+      <Word>instanceof</Word>
+      <Word>new</Word>
+      <Word>null</Word>
+      <Word>return</Word>
+      <Word>super</Word>
+      <Word>switch</Word>
+      <Word>this</Word>
+      <Word>throw</Word>
+      <Word>true</Word>
+      <Word>try</Word>
+      <Word>typeof</Word>
+      <Word>var</Word>
+      <Word>void</Word>
+      <Word>while</Word>
+      <Word>with</Word>
+      <Word>yield</Word>
+      <Word>let</Word>
+      <Word>static</Word>
+      <Word>enum</Word>
+      <Word>await</Word>
+      <Word>async</Word>
+      <Word>of</Word>
+      <Word>implements</Word>
+      <Word>interface</Word>
+      <Word>package</Word>
+      <Word>private</Word>
+      <Word>protected</Word>
+      <Word>public</Word>
+    </Keywords>
+    
+    <Keywords color="Constants">
+      <Word>undefined</Word>
+      <Word>NaN</Word>
+      <Word>Infinity</Word>
+    </Keywords>
+    
+    <Keywords color="GlobalObjects">
+      <Word>Array</Word>
+      <Word>Boolean</Word>
+      <Word>Date</Word>
+      <Word>Error</Word>
+      <Word>Function</Word>
+      <Word>JSON</Word>
+      <Word>Math</Word>
+      <Word>Number</Word>
+      <Word>Object</Word>
+      <Word>RegExp</Word>
+      <Word>String</Word>
+      <Word>Symbol</Word>
+      <Word>Map</Word>
+      <Word>Set</Word>
+      <Word>WeakMap</Word>
+      <Word>WeakSet</Word>
+      <Word>Promise</Word>
+      <Word>Proxy</Word>
+      <Word>Reflect</Word>
+    </Keywords>
+    
+    <!-- Punctuation -->
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;=:]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>
