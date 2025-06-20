@@ -116,17 +116,26 @@ namespace RoastMyCode
         {
             // First try the filename-based detection for exact matches and special files
             string fileNameLower = Path.GetFileName(fileName).ToLowerInvariant();
-            if (_languageMap.ContainsKey(fileNameLower)) return _languageMap[fileNameLower];
+            if (_languageMap.ContainsKey(fileNameLower)) 
+            {
+                _lastDetectedLanguage = _languageMap[fileNameLower];
+                return _lastDetectedLanguage;
+            }
 
             foreach (var pattern in _languageMap.Keys.Where(k => k.EndsWith("/")))
             {
-                if (fileName.Replace("\\", "/").Contains(pattern)) return _languageMap[pattern];
+                if (fileName.Replace("\\", "/").Contains(pattern)) 
+                {
+                    _lastDetectedLanguage = _languageMap[pattern];
+                    return _lastDetectedLanguage;
+                }
             }
 
             // Try extension-based detection
             string extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (!string.IsNullOrEmpty(extension) && _languageMap.ContainsKey(extension)) 
             {
+                _lastDetectedLanguage = _languageMap[extension];
                 // For specific extensions that might need additional content-based verification
                 if (extension == ".rs" || extension == ".go" || extension == ".rb" || extension == ".php" || extension == ".java")
                 {
@@ -195,7 +204,8 @@ namespace RoastMyCode
                 }
             }
 
-            return "Unknown";
+            _lastDetectedLanguage = "Unknown";
+            return _lastDetectedLanguage;
         }
 
         /// <summary>
@@ -431,6 +441,11 @@ namespace RoastMyCode
                     
                     // Automatically roast the image
                     string selectedLevel = (cmbRoastLevel.SelectedIndex > 0 ? cmbRoastLevel.SelectedItem?.ToString() : "Savage") ?? "Savage";
+                    if (data.image == null)
+                    {
+                        MessageBox.Show("Cannot process null image", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                     string aiResponse = await _aiService.RoastImage(data.image, selectedLevel, _conversationHistory);
                     
                     // Store the AI response for manual playback

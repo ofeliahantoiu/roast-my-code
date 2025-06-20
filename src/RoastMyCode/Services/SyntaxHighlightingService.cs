@@ -53,6 +53,12 @@ namespace RoastMyCode.Controls
             if (string.IsNullOrEmpty(language))
                 return null;
                 
+            // Check if service is properly initialized
+            if (!_isInitialized)
+            {
+                System.Diagnostics.Debug.WriteLine("Warning: SyntaxHighlightingService was not properly initialized!");
+            }
+                
             // Normalize language name
             language = language.ToLowerInvariant().Trim();
             

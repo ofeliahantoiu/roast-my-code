@@ -182,16 +182,25 @@ namespace RoastMyCode
             try
             {
                 var cameras = _cameraService.GetAvailableCameras();
-                _cameraComboBox.Items.Clear();
-                _cameraComboBox.Items.AddRange(cameras.ToArray());
-
-                if (_cameraComboBox.Items.Count > 0)
+                if (_cameraComboBox != null)
                 {
-                    _cameraComboBox.SelectedIndex = 0;
+                    _cameraComboBox.Items.Clear();
+                    if (cameras != null && cameras.Any())
+                    {
+                        _cameraComboBox.Items.AddRange(cameras.ToArray());
+                    }
                 }
-                else
+
+                if (_cameraComboBox != null)
                 {
-                    MessageBox.Show("No cameras found on this system.", "No Cameras", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    if (_cameraComboBox.Items.Count > 0)
+                    {
+                        _cameraComboBox.SelectedIndex = 0;
+                    }
+                    else
+                    {
+                        MessageBox.Show("No cameras found on this system.", "No Cameras", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
             }
             catch (Exception ex)
