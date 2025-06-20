@@ -1,11 +1,11 @@
-# RoastMyCode 🍖
+# RoastMyCode 
 
 A Windows desktop application that uses AI to roast your code with dark and smart humor. Capture your device camera, upload files, or type your code directly to get entertaining feedback from an AI assistant.
 
 ## Features 
 
 - **AI-Powered Code Roasting**: Get humorous and witty feedback on your code
-- **Camera Integration**: Capture screenshots of you camera directly from the app
+- **Camera Integration**: Capture screenshots of your camera directly from the app
 - **File Upload**: Upload code files for roasting
 - **Text-to-Speech**: Have the AI responses read aloud
 - **Dark/Light Theme**: Toggle between themes for comfortable coding
@@ -16,9 +16,9 @@ A Windows desktop application that uses AI to roast your code with dark and smar
 ## Prerequisites 
 
 ### Required Software
-- **.NET 6.0 SDK** or later
+- **.NET 6.0 Runtime** (for running pre-built executable)
+- **.NET 6.0 SDK** (only if building from source)
 - **Windows 10/11** (Windows Forms application)
-- **Visual Studio 2022** 
 
 ### Optional but Recommended
 - **Webcam/Camera** for screenshot capture functionality
@@ -26,11 +26,12 @@ A Windows desktop application that uses AI to roast your code with dark and smar
 
 ## Installation and Running
 
+
 ### Method 1: Clone and Build 
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ourRepository/roast-my-code.git
    cd roast-my-code/src
    ```
 
@@ -48,6 +49,7 @@ A Windows desktop application that uses AI to roast your code with dark and smar
    ```bash
    dotnet build
    ```
+
 5. **Run the project**
    ```bash
    dotnet run
@@ -55,7 +57,7 @@ A Windows desktop application that uses AI to roast your code with dark and smar
  
 ### Method 2: Visual Studio
 
-1. **Open Visual Studio 2022**
+1. **Open Visual Studio 2022** (Community edition is free)
 2. **Open the solution file**: `RoastMyCode.sln`
 3. **Restore NuGet packages** (Visual Studio should do this automatically)
 4. **Build the solution** (Ctrl+Shift+B)
@@ -65,7 +67,36 @@ A Windows desktop application that uses AI to roast your code with dark and smar
 
 ### API Keys Setup
 
-The application requires API keys for AI services. In the `gitignore` please comment out this file `appsettings.json`. There is another file that should contain the key, if you encounter any issue with the AI not working please sure that the key is also here`src\RoastMyCode\bin\Debug\net6.0-windows\appsettings.json`.
+The application requires an OpenAI API key for AI services. You need to update the `appsettings.json` file in the project root:
+
+1. **There is an `appsettings.json`** in the `src` directory 
+2. **Add our OpenAI API key**:
+
+```json
+{
+  "OpenAI": {
+    "ApiKey": "openai-api-key-here",
+    "Model": "gpt-3.5-turbo"
+  }
+}
+```
+
+**Important Notes:**
+- Replace `openai-api-key-here` with our actual OpenAI API key
+- Get our API key from api_key.txt
+- The `appsettings.json` file is already in `.gitignore` to protect our API key
+- If you encounter any error with the API key please ensure that the key is also present here `src\RoastMyCode\bin\Debug\net6.0-windows\appsettings.json`
+
+### Dependencies
+
+The application uses the following key dependencies:
+- **OpenCvSharp4**: For camera capture functionality
+- **NAudio**: For audio processing
+- **System.Speech**: For text-to-speech
+- **AvalonEdit**: For code editing features
+- **Microsoft.Extensions.Configuration**: For configuration management
+
+All dependencies are automatically restored when building the project.
 
 ## Usage Guide 📖
 
@@ -96,10 +127,9 @@ The application requires API keys for AI services. In the `gitignore` please com
 - Supported formats: `.txt`, `.cs`, `.js`, `.py`, `.java`, `.cpp`, `.html`, `.css`, etc.
 - ZIP files are automatically extracted and processed
 
-
 ### Features
 
-#### heme Toggle
+#### Theme Toggle
 - Click the theme icon to switch between dark and light modes
 
 #### Text-to-Speech
@@ -114,5 +144,6 @@ The application requires API keys for AI services. In the `gitignore` please com
 - **Light**: Gentle, constructive feedback
 - **Medium**: Balanced humor and criticism
 - **Savage**: Brutal, hilarious roasting
+
 
 **Happy Coding and Roasting!**  
